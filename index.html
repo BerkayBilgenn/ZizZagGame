@@ -1,0 +1,122 @@
+<!DOCTYPE html>
+<html lang="tr">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no">
+    <title>İGÜ ZigZag Rota</title>
+    <link rel="icon" href="favicon.ico" type="image/x-icon">
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800;900&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="style.css">
+</head>
+<body>
+    <!-- Ana Oyun Konteyneri -->
+    <div id="game">
+        <!-- Logo Konteyneri - Sabit üst konumda -->
+        
+
+        <!-- Başlangıç Ekranı -->
+        <section id="startScreen">
+            <img src="https://panel.gelisim.edu.tr/assets/2022/resimler/ogrencidekanligi/odlogopng5_cdff79132e484ba28b5ff3e7d50d19c9.png" 
+                 alt="İstanbul Gelişim Üniversitesi Logo" 
+                 id="logoImage">
+            <div class="content-wrapper">
+                <h1 id="gameTitle">
+                    <span class="title-icon">🎯</span>
+                    ZigZag Rota
+                </h1>
+                
+                <p id="gameSubtitle">İstanbul Gelişim Üniversitesi</p>
+                
+                <div class="button-group">
+                    <button id="showAchievementsBtn" class="btn btn-secondary">
+                        <span class="btn-icon">🏆</span>
+                        Başarılar
+                    </button>
+                    
+                    <button id="startButtonMain" class="btn btn-primary">
+                        <span class="btn-icon">🚀</span>
+                        Oyuna Başla
+                    </button>
+                </div>
+            </div>
+        </section>
+
+        <!-- Oyun HUD'ı -->
+        <div id="hud">
+            <div id="scoreBoard">Skor: 0</div>
+            <div id="gameInfo">
+                <div id="streak">
+                    <span class="info-icon">🔥</span>
+                    <span class="info-label">Seri:</span>
+                    <span class="info-value">0</span>
+                </div>
+                <div id="level">
+                    <span class="info-icon">📊</span>
+                    <span class="info-label">Seviye:</span>
+                    <span class="info-value">1</span>
+                </div>
+                <div id="combo">
+                    <span class="info-icon">⚡</span>
+                    <span class="info-label">Kombo:</span>
+                    <span class="info-value">x1</span>
+                </div>
+            </div>
+        </div>
+
+        <!-- Oyun Canvas'ı -->
+        <canvas id="canvas"></canvas>
+
+        <!-- Bildirim Alanı -->
+        <div id="notification"></div>
+
+        <!-- Başarılar Listesi Modal -->
+        <div id="scoreList" class="modal">
+            <div class="modal-content">
+                <div class="modal-header">
+                    <h3>🏆 Başarılar</h3>
+                    <button id="closeScoreList" class="close-btn">&times;</button>
+                </div>
+                <div class="modal-body">
+                    <ul id="scoreItems"></ul>
+                </div>
+            </div>
+        </div>
+
+        <!-- Oyun Bitti Ekranı -->
+        <div id="gameOver" class="modal">
+            <div class="modal-content game-over-content">
+                <div class="modal-header">
+                    <h3>Oyun Bitti!</h3>
+                </div>
+                <div class="modal-body">
+                    <div id="finalScore" class="score-display"></div>
+                    <div id="personalBest" class="best-score"></div>
+                    <div id="sessionStats" class="session-stats"></div>
+                </div>
+                
+                    <div class="button-group">
+                        <button id="returnToMenuBtn" class="btn btn-secondary">
+                            <span class="btn-icon">🏠</span>
+                            Ana Menü
+                        </button>
+                        <button id="startButtonRestart" class="btn btn-primary">
+                            <span class="btn-icon">🚀</span>
+                            Tekrar Oyna
+                        </button>
+                        <button id="shareScoreBtn" class="btn btn-accent">
+                            <span class="btn-icon">📱</span>
+                            Paylaş
+                        </button>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        
+    </div>
+
+    <script src="script.js" defer></script>
+</body>
+</html>
