@@ -128,7 +128,7 @@ body::before {
     height: 100dvh; /* Dinamik viewport height */
     max-width: 420px;
     max-height: 750px;
-    background: var(--glass-bg);
+    background: var(--dark-gradient);
     backdrop-filter: blur(20px);
     -webkit-backdrop-filter: blur(20px);
     border: 1px solid var(--glass-border);
