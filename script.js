@@ -4,12 +4,13 @@ const ctx = canvas.getContext('2d');
 // Oyun durumu
 let gameStarted = false;
 let player = { x: 200, y: 550, radius: 12, dir: 1, trail: [] };
-let speed = 2;
+let speed = 1.5; // Başlangıç hızı azaltıldı
 let score = 0;
 let isGameOver = false;
 let obstacles = [];
 let powerups = [];
 let particles = [];
+let animationId = null; // Animation frame kontrolü için
 
 // Bağımlılık mekanikleri
 let streak = 0;
@@ -37,19 +38,19 @@ const notification = document.getElementById('notification');
 const startScreen = document.getElementById('startScreen');
 const hud = document.getElementById('hud');
 
-// Sabitler
-const gapSize = 110;
+// Sabitler - Daha kolay oyun için ayarlar
+const gapSize = 130; // Gap boyutu artırıldı
 const obstacleHeight = 20;
-const minGapX = 50;
-let maxGapX = canvas.width - gapSize - 50;
-const minVerticalSpacing = 130;
+const minGapX = 60; // Minimum kenar boşluğu artırıldı
+let maxGapX = canvas.width - gapSize - 60;
+const minVerticalSpacing = 160; // Dikey boşluk artırıldı
 
 function resizeCanvas() {
   const gameContainer = document.getElementById('game');
   const rect = gameContainer.getBoundingClientRect();
   canvas.width = rect.width;
   canvas.height = rect.height;
-  maxGapX = canvas.width - gapSize - 50;
+  maxGapX = canvas.width - gapSize - 60;
 
   if (!gameStarted) {
     player.x = canvas.width / 2;
@@ -58,18 +59,33 @@ function resizeCanvas() {
 }
 
 function startGame() {
+  // Önceki oyunu temizle
+  if (animationId) {
+    cancelAnimationFrame(animationId);
+  }
+  
   gameStarted = true;
+  isGameOver = false;
   startScreen.style.display = 'none';
   hud.style.display = 'block';
+  gameOverDiv.style.display = 'none';
+  
+  // Oyun değişkenlerini sıfırla
+  resetGameVariables();
+  
   checkDailyStreak();
   draw();
 }
-document.getElementById('showAchievementsBtn').addEventListener('click', showScoreList);
 
-function restartGame() {
-  resizeCanvas();
-  player = { x: canvas.width / 2, y: canvas.height - 50, radius: 12, dir: 1, trail: [] };
-  speed = 2;
+function resetGameVariables() {
+  player = { 
+    x: canvas.width / 2, 
+    y: canvas.height - 50, 
+    radius: 12, 
+    dir: 1, 
+    trail: [] 
+  };
+  speed = 1.5; // Mobil için yavaş başlangıç
   score = 0;
   level = 1;
   combo = 1;
@@ -78,42 +94,95 @@ function restartGame() {
   obstacles = [];
   powerups = [];
   particles = [];
+}
+
+document.getElementById('showAchievementsBtn').addEventListener('click', showScoreList);
+
+function restartGame() {
+  // Önceki animasyonu durdur
+  if (animationId) {
+    cancelAnimationFrame(animationId);
+  }
+  
+  resizeCanvas();
+  resetGameVariables();
   isGameOver = false;
   gameOverDiv.style.display = 'none';
   draw();
 }
 
 function gameOver() {
-  // Skoru kaydet
-let scores = JSON.parse(localStorage.getItem('scores') || '[]');
-scores.push(Math.floor(score));
-scores.sort((a, b) => b - a); // büyükten küçüğe sırala
-localStorage.setItem('scores', JSON.stringify(scores));
+  // Animation loop'u durdur
+  if (animationId) {
+    cancelAnimationFrame(animationId);
+    animationId = null;
+  }
+  
+  // Oyun durumunu ayarla
   isGameOver = true;
   sessionGames++;
+  
+  // Skoru kaydet
+  try {
+    let scores = JSON.parse(localStorage.getItem('scores') || '[]');
+    scores.push(Math.floor(score));
+    scores.sort((a, b) => b - a);
+    localStorage.setItem('scores', JSON.stringify(scores));
+  } catch (error) {
+    console.log('Score save error:', error);
+  }
+  
   totalScore += Math.floor(score);
 
   let isNewRecord = false;
   if (Math.floor(score) > bestScore) {
     bestScore = Math.floor(score);
     isNewRecord = true;
-    localStorage.setItem('bestScore', bestScore.toString());
-    addAchievement('🏆 Yeni Rekor!');
+    try {
+      localStorage.setItem('bestScore', bestScore.toString());
+      addAchievement('🏆 Yeni Rekor!');
+    } catch (error) {
+      console.log('Best score save error:', error);
+    }
   }
 
-  localStorage.setItem('totalScore', totalScore.toString());
+  try {
+    localStorage.setItem('totalScore', totalScore.toString());
+  } catch (error) {
+    console.log('Total score save error:', error);
+  }
 
+  // UI'ı güncelle - her elementi kontrol et
   let message = isNewRecord ? '🏆 YENİ REKOR! 🏆<br>' : '🎮 Oyun Bitti!<br>';
   message += `Skorun: ${Math.floor(score)}`;
 
-  finalScore.innerHTML = message;
-  personalBest.innerHTML = `🥇 En İyi: ${bestScore}`;
-  sessionStats.innerHTML = `📊 Bu Oturum: ${sessionGames} oyun<br>💯 Toplam Puan: ${totalScore}`;
-  gameOverDiv.style.display = 'block';
+  if (finalScore) {
+    finalScore.innerHTML = message;
+  }
+  
+  if (personalBest) {
+    personalBest.innerHTML = `🥇 En İyi: ${bestScore}`;
+  }
+  
+  if (sessionStats) {
+    sessionStats.innerHTML = `📊 Bu Oturum: ${sessionGames} oyun<br>💯 Toplam Puan: ${totalScore}`;
+  }
+  
+  // Game over ekranını göster
+  if (gameOverDiv) {
+    gameOverDiv.style.display = 'block';
+  }
 
   if (streak > 0) {
     combo = Math.max(1, combo - 1);
   }
+  
+  console.log('Game Over - Score:', Math.floor(score), 'UI Elements Check:', {
+    finalScore: !!finalScore,
+    personalBest: !!personalBest,
+    sessionStats: !!sessionStats,
+    gameOverDiv: !!gameOverDiv
+  });
 }
 
 function checkDailyStreak() {
@@ -141,20 +210,30 @@ function addAchievement(text) {
     achievements.push(text);
     localStorage.setItem('achievements', JSON.stringify(achievements));
 
-    const el = document.createElement('div');
-    el.className = 'achievement';
-    el.textContent = text;
-    achievementsDiv.appendChild(el);
+    // Safe DOM manipulation with error handling
+    try {
+      if (achievementsDiv) {
+        const el = document.createElement('div');
+        el.className = 'achievement';
+        el.textContent = text;
+        achievementsDiv.appendChild(el);
 
-    setTimeout(() => {
-      if (el.parentNode) el.parentNode.removeChild(el);
-    }, 4000);
+        setTimeout(() => {
+          if (el && el.parentNode) {
+            el.parentNode.removeChild(el);
+          }
+        }, 4000);
+      }
+    } catch (error) {
+      console.log('Achievement display error:', error);
+    }
   }
 }
+
 const returnToMenuBtn = document.getElementById('returnToMenuBtn');
 if (returnToMenuBtn) {
   returnToMenuBtn.addEventListener('click', () => {
-    returnToMenu();  // zaten tanımlı olan fonksiyonun adı bu
+    returnToMenu();
   });
 }
 
@@ -228,7 +307,7 @@ function drawPowerups() {
         score += bonus;
         showNotification(`💎 +${Math.floor(bonus)} bonus!`);
       } else {
-        speed = Math.max(1.5, speed - 0.5);
+        speed = Math.max(1.2, speed - 0.3); // Minimum hız artırıldı
         showNotification('⏰ Yavaşlatma!');
       }
     }
@@ -240,9 +319,15 @@ function drawPowerups() {
 function createObstacle() {
   const last = obstacles.at(-1);
   let gapX;
+  let attempts = 0;
+  
+  // Daha güvenli gap pozisyonu seçimi
   do {
     gapX = Math.random() * (maxGapX - minGapX) + minGapX;
-  } while (last && Math.abs(gapX - last.gapX) < gapSize / 2);
+    attempts++;
+    if (attempts > 10) break; // Sonsuz döngüyü engelle
+  } while (last && Math.abs(gapX - last.gapX) < gapSize / 3); // Daha az kısıtlama
+  
   const y = last ? last.y - minVerticalSpacing : -obstacleHeight;
   obstacles.push({ y, gapX, passed: false });
 }
@@ -250,6 +335,7 @@ function createObstacle() {
 function drawPlayer() {
   player.trail.push({ x: player.x, y: player.y });
   if (player.trail.length > 10) player.trail.shift();
+  
   for (let i = 0; i < player.trail.length; i++) {
     ctx.save();
     ctx.globalAlpha = (i / player.trail.length) * 0.6;
@@ -284,14 +370,14 @@ function drawObstacles() {
     if (!obs.passed && obs.y > player.y) {
       obs.passed = true;
       streak++;
-      combo = Math.min(combo + 0.3, 10);
+      combo = Math.min(combo + 0.2, 8); // Combo artışı azaltıldı
       perfectHits++;
       const centerX = obs.gapX + gapSize / 2;
       const distance = Math.abs(player.x - centerX);
       const bonus = Math.floor(10 * combo);
       score += bonus;
 
-      if (distance < 25) {
+      if (distance < 30) { // Perfect hit aralığı genişletildi
         const perfectBonus = Math.floor(20 * combo);
         score += perfectBonus;
         createParticles(player.x, player.y, '#FFD700');
@@ -336,66 +422,107 @@ function checkAchievements() {
 }
 
 function updateLevel() {
-  const newLevel = Math.floor(score / 150) + 1;
+  const newLevel = Math.floor(score / 200) + 1; // Level artışı yavaşlatıldı
   if (newLevel > level) {
     level = newLevel;
-    speed += 0.25;
+    speed += 0.15; // Hız artışı azaltıldı
     showNotification(`🆙 Seviye ${level}!`);
     createParticles(player.x, player.y, '#00FF00');
   }
 }
 
 function checkCollision() {
-  return obstacles.some(obs =>
-    player.y + player.radius > obs.y &&
-    player.y - player.radius < obs.y + obstacleHeight &&
-    (player.x - player.radius < obs.gapX || player.x + player.radius > obs.gapX + gapSize)
-  );
+  // Daha hassas çarpışma kontrolü - sadece yakın engelleri kontrol et
+  const playerLeft = player.x - player.radius;
+  const playerRight = player.x + player.radius;
+  const playerTop = player.y - player.radius;
+  const playerBottom = player.y + player.radius;
+  
+  for (let obs of obstacles) {
+    // Sadece oyuncunun yakınındaki engelleri kontrol et
+    if (Math.abs(obs.y - player.y) > 50) continue;
+    
+    const obsTop = obs.y;
+    const obsBottom = obs.y + obstacleHeight;
+    const gapLeft = obs.gapX;
+    const gapRight = obs.gapX + gapSize;
+    
+    // Oyuncu engelle çakışıyor mu?
+    if (playerBottom > obsTop && playerTop < obsBottom) {
+      // Sol engelle çarpışma - daha toleranslı
+      if (playerRight < gapLeft + 5) return true;
+      // Sağ engelle çarpışma - daha toleranslı
+      if (playerLeft > gapRight - 5) return true;
+    }
+  }
+  return false;
 }
 
 function updateUI() {
-  scoreBoard.textContent = 'Skor: ' + Math.floor(score);
-  streakDisplay.textContent = '🔥 Seri: ' + streak;
-  levelDisplay.textContent = '📊 Seviye: ' + level;
-  comboDisplay.textContent = '⚡ Kombo: x' + combo.toFixed(1);
+  if (scoreBoard) scoreBoard.textContent = 'Skor: ' + Math.floor(score);
+  if (streakDisplay) streakDisplay.textContent = '🔥 Seri: ' + streak;
+  if (levelDisplay) levelDisplay.textContent = '📊 Seviye: ' + level;
+  if (comboDisplay) comboDisplay.textContent = '⚡ Kombo: x' + combo.toFixed(1);
 }
 
 function draw() {
   if (isGameOver || !gameStarted) return;
 
-  ctx.clearRect(0, 0, canvas.width, canvas.height);
-  drawBackgroundElements();
-  drawPlayer();
-  drawObstacles();
-  drawPowerups();
-  drawParticles();
-  updateParticles();
+  try {
+    ctx.clearRect(0, 0, canvas.width, canvas.height);
+    drawBackgroundElements();
+    drawPlayer();
+    drawObstacles();
+    drawPowerups();
+    drawParticles();
+    updateParticles();
 
-  player.x += player.dir * speed;
+    // Oyuncu hareketi
+    const moveSpeed = speed * 1.2; // Hareket hızını artır
+    player.x += player.dir * moveSpeed;
 
-  if (player.x - player.radius <= 0 || player.x + player.radius >= canvas.width) {
-    player.dir *= -1;
-    createParticles(player.x, player.y, '#ffffff');
-  }
+    // Kenarlarda zıplama
+    if (player.x - player.radius <= 0 || player.x + player.radius >= canvas.width) {
+      player.dir *= -1;
+      player.x = Math.max(player.radius, Math.min(canvas.width - player.radius, player.x));
+      createParticles(player.x, player.y, '#ffffff');
+    }
 
-  if (checkCollision()) {
+    // Çarpışma kontrolü - daha güvenli
+    try {
+      if (checkCollision()) {
+        console.log('Collision detected at:', player.x, player.y);
+        gameOver();
+        return;
+      }
+    } catch (error) {
+      console.log('Collision check error:', error);
+    }
+
+    // Skor artışı
+    score += 0.1 * combo; // Skor artışı azaltıldı
+    updateLevel();
+    updateUI();
+
+    // Power-up oluşturma
+    if (Math.random() < 0.005) createPowerup(); // Daha az power-up
+
+    // Yeni engel oluşturma
+    if (obstacles.length === 0 || obstacles.at(-1).y > -minVerticalSpacing * 0.8) {
+      createObstacle();
+    }
+
+    // Eski engelleri temizle
+    obstacles = obstacles.filter(obs => obs.y < canvas.height + obstacleHeight);
+
+    // Animation frame kaydet
+    animationId = requestAnimationFrame(draw);
+    
+  } catch (error) {
+    console.log('Draw function error:', error);
+    // Hata durumunda oyunu durdur
     gameOver();
-    return;
   }
-
-  score += 0.15 * combo;
-  updateLevel();
-  updateUI();
-
-  if (Math.random() < 0.006) createPowerup();
-
-  if (obstacles.length === 0 || obstacles.at(-1).y > -minVerticalSpacing) {
-    createObstacle();
-  }
-
-  obstacles = obstacles.filter(obs => obs.y < canvas.height + obstacleHeight);
-
-  requestAnimationFrame(draw);
 }
 
 function shareScore() {
@@ -416,7 +543,7 @@ canvas.addEventListener('touchstart', e => {
   e.preventDefault();
   if (!isGameOver && gameStarted) {
     player.dir *= -1;
-    speed += 0.02;
+    speed += 0.01; // Hız artışı azaltıldı
     createParticles(player.x, player.y, '#ffffff');
   }
 }, { passive: false });
@@ -424,7 +551,7 @@ canvas.addEventListener('touchstart', e => {
 canvas.addEventListener('click', () => {
   if (!isGameOver && gameStarted) {
     player.dir *= -1;
-    speed += 0.02;
+    speed += 0.01; // Hız artışı azaltıldı
     createParticles(player.x, player.y, '#ffffff');
   }
 });
@@ -433,27 +560,33 @@ document.addEventListener('keydown', e => {
   if ((e.code === 'Space' || e.code === 'ArrowLeft' || e.code === 'ArrowRight') && !isGameOver && gameStarted) {
     e.preventDefault();
     player.dir *= -1;
-    speed += 0.02;
+    speed += 0.01; // Hız artışı azaltıldı
     createParticles(player.x, player.y, '#ffffff');
   }
 });
+
 function returnToMenu() {
+  // Animation loop'u durdur
+  if (animationId) {
+    cancelAnimationFrame(animationId);
+    animationId = null;
+  }
+  
   gameStarted = false;
   isGameOver = false;
-  resizeCanvas();          // canvas boyutunu güncelle
-  startScreen.style.display = 'flex';  // veya 'block' değil, flex kullandığın için 'flex' yazmalısın
+  resizeCanvas();
+  startScreen.style.display = 'flex';
   hud.style.display = 'none';
   gameOverDiv.style.display = 'none';
 }
 
-
-
 function showScoreList() {
   let scores = JSON.parse(localStorage.getItem('scores') || '[]');
   const list = document.getElementById('scoreItems');
+  if (!list) return;
+  
   list.innerHTML = '';
 
-  // Skorları büyükten küçüğe sırala (eğer zaten sıralı değilse)
   scores.sort((a, b) => b - a);
 
   if (scores.length === 0) {
@@ -466,19 +599,20 @@ function showScoreList() {
     });
   }
 
-  document.getElementById('scoreList').style.display = 'block';
-}
-document.getElementById('closeScoreList').addEventListener('click', () => {
-  hideScoreList();
-});
-
-function hideScoreList() {
-  document.getElementById('scoreList').style.display = 'none';
+  const scoreListEl = document.getElementById('scoreList');
+  if (scoreListEl) scoreListEl.style.display = 'block';
 }
 
+const closeScoreListBtn = document.getElementById('closeScoreList');
+if (closeScoreListBtn) {
+  closeScoreListBtn.addEventListener('click', () => {
+    hideScoreList();
+  });
+}
 
 function hideScoreList() {
-  document.getElementById('scoreList').style.display = 'none';
+  const scoreListEl = document.getElementById('scoreList');
+  if (scoreListEl) scoreListEl.style.display = 'none';
 }
 
 // Butonlar
