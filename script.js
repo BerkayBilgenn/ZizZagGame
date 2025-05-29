@@ -525,17 +525,155 @@ function draw() {
   }
 }
 
+// Instagram Paylaşım Fonksiyonu
 function shareScore() {
   const text = `🎯 IGÜ ZigZag Rota'da ${Math.floor(score)} puan aldım! 🔥 Seri: ${streak}, 📊 Seviye: ${level}`;
-  if (navigator.share) {
-    navigator.share({ title: 'IGÜ ZigZag Rota', text }).catch(() => {
-      navigator.clipboard.writeText(text);
-      showNotification('📋 Skor kopyalandı!');
-    });
+  const instagramUsername = "ogrenci.dekanligi";
+  const instagramUrl = "https://www.instagram.com/ogrenci.dekanligi/";
+  
+  // Debug için konsola yazdır
+  console.log("Share fonksiyonu çalıştırılıyor...");
+  console.log("Paylaşılacak metin:", text);
+  
+  // Önce skoru panoya kopyala
+  if (navigator.clipboard && navigator.clipboard.writeText) {
+    navigator.clipboard.writeText(text)
+      .then(() => {
+        console.log("Metin panoya kopyalandı");
+      })
+      .catch(err => {
+        console.error("Panoya kopyalama hatası:", err);
+        // Fallback: eski yöntemle kopyala
+        fallbackCopyTextToClipboard(text);
+      });
   } else {
-    navigator.clipboard.writeText(text);
-    showNotification('📋 Skor kopyalandı!');
+    // Eski tarayıcılar için fallback
+    fallbackCopyTextToClipboard(text);
   }
+  
+  // Mobil cihaz kontrolü
+  const isMobile = /Android|webOS|iPhone|iPad|iPod|BlackBerry|IEMobile|Opera Mini/i.test(navigator.userAgent);
+  
+  if (isMobile) {
+    console.log("Mobil cihaz tespit edildi");
+    
+    // iOS için özel kontrol
+    const isIOS = /iPad|iPhone|iPod/.test(navigator.userAgent);
+    
+    if (isIOS) {
+      // iOS'ta Instagram uygulamasını açmaya çalış
+      const instagramAppUrl = `instagram://user?username=${instagramUsername}`;
+      
+      // Gizli iframe ile test et
+      const iframe = document.createElement('iframe');
+      iframe.style.display = 'none';
+      iframe.src = instagramAppUrl;
+      document.body.appendChild(iframe);
+      
+      // 1 saniye sonra iframe'i temizle ve web versiyonunu aç
+      setTimeout(() => {
+        document.body.removeChild(iframe);
+        window.open(instagramUrl, '_blank');
+      }, 1000);
+      
+    } else {
+      // Android için
+      try {
+        // Intent URL ile Instagram uygulamasını açmaya çalış
+        const intentUrl = `intent://instagram.com/_u/${instagramUsername}/#Intent;package=com.instagram.android;scheme=https;end`;
+        window.location.href = intentUrl;
+        
+        // 2 saniye sonra web versiyonunu aç (uygulama yoksa)
+        setTimeout(() => {
+          window.open(instagramUrl, '_blank');
+        }, 2000);
+      } catch (error) {
+        console.error("Instagram açma hatası:", error);
+        window.open(instagramUrl, '_blank');
+      }
+    }
+  } else {
+    console.log("Masaüstü cihaz tespit edildi");
+    // Masaüstünde web versiyonunu aç
+    const newWindow = window.open(instagramUrl, '_blank');
+    
+    if (!newWindow || newWindow.closed || typeof newWindow.closed == 'undefined') {
+      alert("Pop-up engelleyici aktif! Lütfen bu site için pop-up'lara izin verin.");
+      console.error("Pop-up engellendi");
+    } else {
+      console.log("Instagram sayfası açıldı");
+    }
+  }
+  
+  // showNotification fonksiyonu varsa çalıştır
+  if (typeof showNotification === 'function') {
+    showNotification('📱 Instagram\'a yönlendirildi! Skor panoya kopyalandı.');
+  } else {
+    console.log('📱 Instagram\'a yönlendirildi! Skor panoya kopyalandı.');
+  }
+}
+
+// Eski tarayıcılar için fallback kopyalama fonksiyonu
+function fallbackCopyTextToClipboard(text) {
+  const textArea = document.createElement("textarea");
+  textArea.value = text;
+  
+  // Görünmez yap ama erişilebilir tut
+  textArea.style.top = "0";
+  textArea.style.left = "0";
+  textArea.style.position = "fixed";
+  textArea.style.opacity = "0";
+  
+  document.body.appendChild(textArea);
+  textArea.focus();
+  textArea.select();
+  
+  try {
+    const successful = document.execCommand('copy');
+    const msg = successful ? 'başarılı' : 'başarısız';
+    console.log('Fallback kopyalama ' + msg);
+  } catch (err) {
+    console.error('Fallback kopyalama hatası', err);
+  }
+  
+  document.body.removeChild(textArea);
+}
+
+// Paylaş butonuna event listener ekle
+document.addEventListener('DOMContentLoaded', function() {
+  const shareBtn = document.getElementById('shareScoreBtn');
+  if (shareBtn) {
+    shareBtn.addEventListener('click', shareScore);
+    console.log("Paylaş butonu event listener'ı eklendi");
+  } else {
+    console.error("shareScoreBtn bulunamadı!");
+  }
+});
+
+// Eski tarayıcılar için fallback kopyalama fonksiyonu
+function fallbackCopyTextToClipboard(text) {
+  const textArea = document.createElement("textarea");
+  textArea.value = text;
+  
+  // Görünmez yap ama erişilebilir tut
+  textArea.style.top = "0";
+  textArea.style.left = "0";
+  textArea.style.position = "fixed";
+  textArea.style.opacity = "0";
+  
+  document.body.appendChild(textArea);
+  textArea.focus();
+  textArea.select();
+  
+  try {
+    const successful = document.execCommand('copy');
+    const msg = successful ? 'başarılı' : 'başarısız';
+    console.log('Fallback kopyalama ' + msg);
+  } catch (err) {
+    console.error('Fallback kopyalama hatası', err);
+  }
+  
+  document.body.removeChild(textArea);
 }
 
 // Kontroller

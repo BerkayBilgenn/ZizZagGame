@@ -79,6 +79,7 @@ body {
     color: var(--text-primary);
     background: var(--dark-gradient);
     min-height: 100vh;
+    min-height: 100dvh; /* Dinamik viewport height - mobil için */
     overflow: hidden;
     display: flex;
     justify-content: center;
@@ -90,6 +91,11 @@ body {
     -webkit-touch-callout: none;
     -webkit-user-select: none;
     user-select: none;
+    position: fixed; /* Mobil tarayıcıların adres çubuğu sorunu için */
+    top: 0;
+    left: 0;
+    width: 100%;
+    height: 100%;
 }
 
 /* Animated Background */
@@ -119,6 +125,7 @@ body::before {
     position: relative;
     width: 100vw;
     height: 100vh;
+    height: 100dvh; /* Dinamik viewport height */
     max-width: 420px;
     max-height: 750px;
     background: var(--glass-bg);
@@ -392,6 +399,8 @@ body::before {
     height: 100%;
     background: transparent;
     touch-action: none;
+    /* Safe area için padding */
+    padding-bottom: env(safe-area-inset-bottom);
 }
 
 /* ===== Modal Styles ===== */
@@ -672,17 +681,32 @@ body::before {
 
 /* ===== Responsive Design ===== */
 @media (max-width: 480px) {
+    body {
+        height: 100vh;
+        height: 100dvh; /* iOS Safari için */
+        position: fixed;
+        overflow: hidden;
+    }
     #game {
         border-radius: 0;
         max-width: none;
         max-height: none;
         width: 100vw;
         height: 100vh;
+        height: 100dvh;
+        /* Safe area insets */
+        padding-bottom: env(safe-area-inset-bottom);
+        padding-top: env(safe-area-inset-top);
     }
-    
+    #canvas {
+        /* Canvas'ın alt kısmının gözükmesi için */
+        height: calc(100% - env(safe-area-inset-bottom));
+    }
     #logoContainer {
         max-width: none;
         border-radius: 0;
+        /* Safe area top için */
+        padding-top: calc(var(--spacing-md) + env(safe-area-inset-top));
     }
     
     #logoImage {
@@ -693,8 +717,9 @@ body::before {
         margin-top: 70px;
     }
     
+    /* HUD pozisyonunu ayarla */
     #hud {
-        top: 80px;
+        top: calc(80px + env(safe-area-inset-top));
         min-width: 250px;
         padding: var(--spacing-sm) var(--spacing-lg);
     }
@@ -726,6 +751,10 @@ body::before {
 }
 
 @media (max-width: 360px) {
+    #canvas {
+        /* Çok küçük ekranlarda daha fazla padding */
+        padding-bottom: calc(env(safe-area-inset-bottom) + 10px);
+    }
     #gameTitle {
         font-size: 1.8rem;
     }
@@ -742,6 +771,22 @@ body::before {
 }
 
 @media (orientation: landscape) and (max-height: 500px) {
+    body {
+        height: 100vh;
+        height: 100dvh;
+    }
+    
+    #game {
+        height: 100vh;
+        height: 100dvh;
+        padding-bottom: env(safe-area-inset-bottom);
+        padding-left: env(safe-area-inset-left);
+        padding-right: env(safe-area-inset-right);
+    }
+    
+    #canvas {
+        height: calc(100% - env(safe-area-inset-bottom));
+    }
     .content-wrapper {
         margin-top: 60px;
     }
@@ -817,7 +862,16 @@ body::before {
         --glass-border: rgba(255, 255, 255, 0.1);
     }
 }
-
+/* iOS Safari için özel düzeltmeler */
+@supports (-webkit-touch-callout: none) {
+    body {
+        height: -webkit-fill-available;
+    }
+    
+    #game {
+        height: -webkit-fill-available;
+    }
+}
 /* ===== Reduced Motion ===== */
 @media (prefers-reduced-motion: reduce) {
     *,
