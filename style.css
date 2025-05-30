@@ -140,36 +140,35 @@ body::before {
 /* ===== Logo Container ===== */
 #logoContainer {
     position: fixed;
-    top: 0;
+    top: 80px;  /* BURAYA 80px YAZIN (varsayılan 0 yerine) */
     left: 50%;
     transform: translateX(-50%);
     z-index: 1000;
     width: 100%;
     max-width: 420px;
     padding: var(--spacing-md);
+    padding-top: calc(var(--spacing-md) + 20px);
     background: var(--glass-bg-strong);
     backdrop-filter: blur(20px);
     -webkit-backdrop-filter: blur(20px);
     border-bottom: 1px solid var(--glass-border);
     text-align: center;
 }
-
 #logoImage {
     height: 60px;
     width: auto;
     max-width: 100%;
     object-fit: contain;
     transform: scale(7);
-    transform-origin: center;
+    transform-origin: center center;
     transition: var(--transition-normal);
     filter: drop-shadow(0 4px 8px rgba(0, 0, 0, 0.2));
+    display: block;
+    margin: 0 auto; /* Logo'yu container içinde ortalar */
 }
+/* ===== Game Title ===== */
 
-
-#logoImage:hover {
-    transform: scale(1.05);
-    filter: drop-shadow(0 6px 12px rgba(0, 0, 0, 0.3));
-}
+ 
 
 /* ===== Start Screen ===== */
 #startScreen {
@@ -193,7 +192,7 @@ body::before {
     text-align: center;
     max-width: 350px;
     width: 100%;
-    margin-top: 80px; /* Logo için boşluk */
+    margin-top: 160px; /* BURAYA 160px YAZIN (varsayılan 80px yerine) */
 }
 
 #gameTitle {
@@ -207,7 +206,251 @@ body::before {
     text-shadow: 0 0 30px rgba(102, 126, 234, 0.3);
     animation: titleGlow 2s ease-in-out infinite alternate;
 }
+#loginScreen {
+    position: absolute;
+    top: 0;
+    left: 0;
+    width: 100%;
+    height: 100%;
+    background: rgba(0, 0, 0, 0.95);
+    backdrop-filter: blur(20px);
+    -webkit-backdrop-filter: blur(20px);
+    display: flex;
+    flex-direction: column;
+    justify-content: center;
+    align-items: center;
+    z-index: 100;
+    padding: var(--spacing-xl);
+}
 
+#loginLogoImage {
+    height: 80px;
+    width: auto;
+    max-width: 100%;
+    object-fit: contain;
+    transform: scale(7) translateX(-3px); /* 3px sola kaydırma eklendi */
+    transform-origin: center center;
+    margin-bottom: var(--spacing-xl);
+    transition: var(--transition-normal);
+    filter: drop-shadow(0 4px 8px rgba(0, 0, 0, 0.2));
+}
+
+ 
+
+.login-wrapper {
+    text-align: center;
+    max-width: 350px;
+    width: 100%;
+}
+
+#loginTitle {
+    font-size: clamp(2rem, 5vw, 2.5rem);
+    font-weight: 800;
+    background: var(--primary-gradient);
+    -webkit-background-clip: text;
+    -webkit-text-fill-color: transparent;
+    background-clip: text;
+    margin-bottom: var(--spacing-sm);
+    text-shadow: 0 0 30px rgba(102, 126, 234, 0.3);
+    animation: titleGlow 2s ease-in-out infinite alternate;
+}
+
+#loginSubtitle {
+    font-size: 1.1rem;
+    font-weight: 500;
+    color: var(--text-secondary);
+    margin-bottom: var(--spacing-2xl);
+    opacity: 0.9;
+}
+
+/* ===== Login Form Styles ===== */
+.login-form {
+    width: 100%;
+    display: flex;
+    flex-direction: column;
+    gap: var(--spacing-lg);
+}
+
+.input-group {
+    position: relative;
+    width: 100%;
+}
+
+#usernameInput {
+    width: 100%;
+    padding: var(--spacing-md) var(--spacing-lg);
+    padding-left: 3rem; /* Icon için yer */
+    font-size: 1rem;
+    font-weight: 500;
+    color: var(--text-primary);
+    background: var(--glass-bg-strong);
+    backdrop-filter: blur(15px);
+    -webkit-backdrop-filter: blur(15px);
+    border: 2px solid var(--glass-border);
+    border-radius: var(--radius-xl);
+    outline: none;
+    transition: all var(--transition-normal);
+    font-family: inherit;
+    min-height: 50px;
+}
+
+#usernameInput::placeholder {
+    color: var(--text-tertiary);
+    font-weight: 400;
+}
+
+#usernameInput:focus {
+    border-color: var(--primary-color);
+    box-shadow: 0 0 20px rgba(102, 126, 234, 0.3);
+    background: rgba(255, 255, 255, 0.08);
+}
+
+.input-icon {
+    position: absolute;
+    left: var(--spacing-md);
+    top: 50%;
+    transform: translateY(-50%);
+    font-size: 1.2rem;
+    color: var(--text-secondary);
+    pointer-events: none;
+}
+
+.login-button {
+    width: 100%;
+    font-size: 1.1rem;
+    font-weight: 700;
+    min-height: 55px;
+    margin-top: var(--spacing-sm);
+}
+
+/* ===== Error Message ===== */
+.error-message {
+    color: var(--danger-color);
+    font-size: 0.9rem;
+    font-weight: 500;
+    text-align: center;
+    padding: var(--spacing-sm);
+    background: rgba(239, 68, 68, 0.1);
+    border: 1px solid rgba(239, 68, 68, 0.2);
+    border-radius: var(--radius-md);
+    display: none;
+    animation: errorShake 0.5s ease-in-out;
+}
+@keyframes errorShake {
+    0%, 100% { transform: translateX(0); }
+    25% { transform: translateX(-5px); }
+    75% { transform: translateX(5px); }
+}
+
+.error-message.show {
+    display: block;
+}
+
+/* ===== Welcome Message ===== */
+.welcome-text {
+    font-size: 1rem;
+    font-weight: 600;
+    color: var(--accent-color);
+    margin-bottom: var(--spacing-lg);
+    padding: var(--spacing-sm) var(--spacing-md);
+    background: rgba(79, 172, 254, 0.1);
+    border: 1px solid rgba(79, 172, 254, 0.2);
+    border-radius: var(--radius-md);
+    animation: welcomePulse 2s ease-in-out infinite;
+}
+
+@keyframes welcomePulse {
+    0%, 100% { opacity: 1; }
+    50% { opacity: 0.7; }
+}
+
+/* ===== Responsive Adjustments for Login ===== */
+@media (max-width: 480px) {
+     #logoContainer {
+        max-width: none;
+        border-radius: 0;
+        padding-top: calc(var(--spacing-md) + env(safe-area-inset-top) + 40px); /* +40px ekleyin */
+    }
+    .content-wrapper {
+        margin-top: 140px; /* BURAYA 140px YAZIN (varsayılan 70px yerine) */
+    }
+    #loginScreen {
+        padding: var(--spacing-lg);
+    }
+    
+    #loginLogoImage {
+        height: 70px;
+        margin-bottom: var(--spacing-lg);
+    }
+    
+    .login-wrapper {
+        max-width: 300px;
+    }
+    
+    #loginTitle {
+        font-size: 1.8rem;
+    }
+    
+    #loginSubtitle {
+        font-size: 1rem;
+        margin-bottom: var(--spacing-xl);
+    }
+    
+    #usernameInput {
+        padding: var(--spacing-sm) var(--spacing-md);
+        padding-left: 2.5rem;
+        font-size: 0.9rem;
+        min-height: 45px;
+    }
+    
+    .input-icon {
+        left: var(--spacing-sm);
+        font-size: 1rem;
+    }
+    
+    .login-button {
+        font-size: 1rem;
+        min-height: 50px;
+    }
+}
+
+@media (max-width: 360px) {
+    .login-wrapper {
+        max-width: 280px;
+    }
+    
+    #loginTitle {
+        font-size: 1.6rem;
+    }
+    
+    #usernameInput {
+        padding: var(--spacing-xs) var(--spacing-sm);
+        padding-left: 2.2rem;
+        font-size: 0.85rem;
+        min-height: 40px;
+    }
+    
+    .login-button {
+        font-size: 0.9rem;
+        min-height: 45px;
+    }
+}
+
+/* ===== Loading State for Login Button ===== */
+.login-button.loading {
+    position: relative;
+    pointer-events: none;
+    opacity: 0.7;
+}
+
+.login-button.loading .btn-icon {
+    animation: spin 1s linear infinite;
+}
+
+@keyframes spin {
+    from { transform: rotate(0deg); }
+    to { transform: rotate(360deg); }
+}
 @keyframes titleGlow {
     from { filter: drop-shadow(0 0 10px rgba(102, 126, 234, 0.5)); }
     to { filter: drop-shadow(0 0 20px rgba(102, 126, 234, 0.8)); }

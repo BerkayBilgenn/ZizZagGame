@@ -1,122 +1,189 @@
 <!DOCTYPE html>
 <html lang="tr">
-<head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no">
+  <head>
+    <meta charset="UTF-8" />
+    <meta
+      name="viewport"
+      content="width=device-width, initial-scale=1.0, user-scalable=no"
+    />
     <title>İGÜ ZigZag Rota</title>
-    <link rel="icon" href="favicon.ico" type="image/x-icon">
-    <link rel="preconnect" href="https://fonts.googleapis.com">
-    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800;900&display=swap" rel="stylesheet">
-    <link rel="stylesheet" href="style.css">
-</head>
-<body>
+    <link rel="icon" href="favicon.ico" type="image/x-icon" />
+    <link rel="preconnect" href="https://fonts.googleapis.com" />
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+    <link
+      href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800;900&display=swap"
+      rel="stylesheet"
+    />
+    <link rel="stylesheet" href="style.css" />
+   <!-- Firebase Uyumlu (compat) sürümler -->
+<script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-app-compat.js"></script>
+<script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-firestore-compat.js"></script>
+
+
+    <script>
+  const firebaseConfig = {
+    apiKey: "AIzaSyBfpvlGZ1g1jRG2ps2rGP3OC3WBU2sxXnI",
+    authDomain: "zigzaggame-e8cc5.firebaseapp.com",
+    projectId: "zigzaggame-e8cc5",
+    storageBucket: "zigzaggame-e8cc5.appspot.com",
+    messagingSenderId: "990084578788",
+    appId: "1:990084578788:web:4e50ace7bb733c99381bf1"
+  };
+
+  // Firebase’i başlat
+  firebase.initializeApp(firebaseConfig);
+  const db = firebase.firestore();
+</script>
+
+  </head>
+  <body>
     <!-- Ana Oyun Konteyneri -->
     <div id="game">
-        <!-- Logo Konteyneri - Sabit üst konumda -->
+      <!-- Login Ekranı - İlk açılacak ekran -->
+      <section id="loginScreen">
+        <img
+          src="https://panel.gelisim.edu.tr/assets/2022/resimler/ogrencidekanligi/odlogopng5_cdff79132e484ba28b5ff3e7d50d19c9.png"
+          alt="İstanbul Gelişim Üniversitesi Logo"
+          id="loginLogoImage"
+        />
+        <div class="login-wrapper">
+          <h1 id="loginTitle">
+            <span class="title-icon">🎯</span>
+            ZigZag Rota
+          </h1>
+
+          <p id="loginSubtitle">İstanbul Gelişim Üniversitesi</p>
+
+          <div class="login-form">
+            <div class="input-group">
+              <input
+                type="text"
+                id="usernameInput"
+                placeholder="Kullanıcı Adınızı Girin"
+                maxlength="20"
+                autocomplete="off"
+              />
+              <span class="input-icon">👤</span>
+            </div>
+
+            <div id="loginError" class="error-message"></div>
+
+            <button id="loginBtn" class="btn btn-primary login-button">
+              <span class="btn-icon">💾</span>
+              Kaydet ve Başla
+            </button>
+          </div>
+        </div>
+      </section>
+
+      <!-- Başlangıç Ekranı -->
+      <section id="startScreen" style="display: none">
         
 
-        <!-- Başlangıç Ekranı -->
-        <section id="startScreen">
-            <img src="https://panel.gelisim.edu.tr/assets/2022/resimler/ogrencidekanligi/odlogopng5_cdff79132e484ba28b5ff3e7d50d19c9.png" 
-                 alt="İstanbul Gelişim Üniversitesi Logo" 
-                 id="logoImage">
-            <div class="content-wrapper">
-                <h1 id="gameTitle">
-                    <span class="title-icon">🎯</span>
-                    ZigZag Rota
-                </h1>
-                
-                <p id="gameSubtitle">İstanbul Gelişim Üniversitesi</p>
-                
-                <div class="button-group">
-                    <button id="showAchievementsBtn" class="btn btn-secondary">
-                        <span class="btn-icon">🏆</span>
-                        Başarılar
-                    </button>
-                    
-                    <button id="startButtonMain" class="btn btn-primary">
-                        <span class="btn-icon">🚀</span>
-                        Oyuna Başla
-                    </button>
-                </div>
-            </div>
-        </section>
+        <img
+          src="https://panel.gelisim.edu.tr/assets/2022/resimler/ogrencidekanligi/odlogopng5_cdff79132e484ba28b5ff3e7d50d19c9.png"
+          alt="İstanbul Gelişim Üniversitesi Logo"
+          id="logoImage"
+        />
+        <div class="content-wrapper">
+          <h1 id="gameTitle">
+            <span class="title-icon">🎯</span>
+            ZigZag Rota
+          </h1>
 
-        <!-- Oyun HUD'ı -->
-        <div id="hud">
-            <div id="scoreBoard">Skor: 0</div>
-            <div id="gameInfo">
-                <div id="streak">
-                    <span class="info-icon">🔥</span>
-                    <span class="info-label">Seri:</span>
-                    <span class="info-value">0</span>
-                </div>
-                <div id="level">
-                    <span class="info-icon">📊</span>
-                    <span class="info-label">Seviye:</span>
-                    <span class="info-value">1</span>
-                </div>
-                <div id="combo">
-                    <span class="info-icon">⚡</span>
-                    <span class="info-label">Kombo:</span>
-                    <span class="info-value">x1</span>
-                </div>
-            </div>
+          <p id="gameSubtitle">İstanbul Gelişim Üniversitesi</p>
+         
+
+          <div class="button-group">
+            <button id="showAchievementsBtn" class="btn btn-secondary">
+              <span class="btn-icon">🏆</span>
+              Başarılar
+            </button>
+
+            <button id="startButtonMain" class="btn btn-primary">
+              <span class="btn-icon">🚀</span>
+              Oyuna Başla
+            </button>
+
+            <button id="changeUserBtn" class="btn btn-accent">
+              <span class="btn-icon">👤</span>
+              Kullanıcı Değiştir
+            </button>
+          </div>
         </div>
+      </section>
 
-        <!-- Oyun Canvas'ı -->
-        <canvas id="canvas"></canvas>
-
-        <!-- Bildirim Alanı -->
-        <div id="notification"></div>
-
-        <!-- Başarılar Listesi Modal -->
-        <div id="scoreList" class="modal">
-            <div class="modal-content">
-                <div class="modal-header">
-                    <h3>🏆 Başarılar</h3>
-                    <button id="closeScoreList" class="close-btn">&times;</button>
-                </div>
-                <div class="modal-body">
-                    <ul id="scoreItems"></ul>
-                </div>
-            </div>
+      <!-- Oyun HUD'ı -->
+      <div id="hud">
+        <div id="scoreBoard">Skor: 0</div>
+        <div id="gameInfo">
+          <div id="streak">
+            <span class="info-icon">🔥</span>
+            <span class="info-label">Seri:</span>
+            <span class="info-value">0</span>
+          </div>
+          <div id="level">
+            <span class="info-icon">📊</span>
+            <span class="info-label">Seviye:</span>
+            <span class="info-value">1</span>
+          </div>
+          <div id="combo">
+            <span class="info-icon">⚡</span>
+            <span class="info-label">Kombo:</span>
+            <span class="info-value">x1</span>
+          </div>
         </div>
+      </div>
 
-        <!-- Oyun Bitti Ekranı -->
-        <div id="gameOver" class="modal">
-            <div class="modal-content game-over-content">
-                <div class="modal-header">
-                    <h3>Oyun Bitti!</h3>
-                </div>
-                <div class="modal-body">
-                    <div id="finalScore" class="score-display"></div>
-                    <div id="personalBest" class="best-score"></div>
-                    <div id="sessionStats" class="session-stats"></div>
-                </div>
-                
-                    <div class="button-group">
-                        <button id="returnToMenuBtn" class="btn btn-secondary">
-                            <span class="btn-icon">🏠</span>
-                            Ana Menü
-                        </button>
-                        <button id="startButtonRestart" class="btn btn-primary">
-                            <span class="btn-icon">🚀</span>
-                            Tekrar Oyna
-                        </button>
-                        <button id="shareScoreBtn" class="btn btn-accent">
-                            <span class="btn-icon">📱</span>
-                            Paylaş
-                        </button>
-                    </div>
-                </div>
-            </div>
+      <!-- Oyun Canvas'ı -->
+      <canvas id="canvas"></canvas>
+
+      <!-- Bildirim Alanı -->
+      <div id="notification"></div>
+
+      <!-- Başarılar Listesi Modal -->
+      <div id="scoreList" class="modal">
+        <div class="modal-content">
+          <div class="modal-header">
+            <h3>🏆 Başarılar</h3>
+            <button id="closeScoreList" class="close-btn">&times;</button>
+          </div>
+          <div class="modal-body">
+            <ul id="scoreItems"></ul>
+          </div>
         </div>
+      </div>
 
-        
+      <!-- Oyun Bitti Ekranı -->
+      <div id="gameOver" class="modal">
+        <div class="modal-content game-over-content">
+          <div class="modal-header">
+            <h3>Oyun Bitti!</h3>
+          </div>
+          <div class="modal-body">
+            <div id="finalScore" class="score-display"></div>
+            <div id="personalBest" class="best-score"></div>
+            <div id="sessionStats" class="session-stats"></div>
+          </div>
+
+          <div class="button-group">
+            <button id="returnToMenuBtn" class="btn btn-secondary">
+              <span class="btn-icon">🏠</span>
+              Ana Menü
+            </button>
+            <button id="startButtonRestart" class="btn btn-primary">
+              <span class="btn-icon">🚀</span>
+              Tekrar Oyna
+            </button>
+            <button id="shareScoreBtn" class="btn btn-accent">
+              <span class="btn-icon">📱</span>
+              Paylaş
+            </button>
+          </div>
+        </div>
+      </div>
     </div>
 
     <script src="script.js" defer></script>
-</body>
+  </body>
 </html>
