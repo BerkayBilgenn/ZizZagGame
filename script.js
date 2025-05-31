@@ -51,6 +51,53 @@ document.getElementById("loginBtn").addEventListener("click", async () => {
     errorBox.textContent = "Bir hata oluştu. Lütfen tekrar deneyin.";
   }
 });
+function showModernPopup(message, type = "info") {
+  // Önceden varsa sil
+  const existing = document.getElementById("modernPopup");
+  if (existing) existing.remove();
+
+  // Yeni popup oluştur
+  const popup = document.createElement("div");
+  popup.id = "modernPopup";
+  popup.textContent = message;
+
+  // Tipine göre renk ayarla
+  let bg = "#2196f3"; // info
+  if (type === "success") bg = "#4caf50";
+  if (type === "error") bg = "#f44336";
+  if (type === "warning") bg = "#ff9800";
+
+  // Stilleri ekle
+  popup.style.position = "fixed";
+  popup.style.top = "20px";
+  popup.style.left = "50%";
+  popup.style.transform = "translateX(-50%)";
+  popup.style.background = bg;
+  popup.style.color = "#fff";
+  popup.style.padding = "12px 24px";
+  popup.style.borderRadius = "8px";
+  popup.style.boxShadow = "0 2px 8px rgba(0,0,0,0.2)";
+  popup.style.zIndex = "9999";
+  popup.style.fontSize = "16px";
+  popup.style.opacity = "0";
+  popup.style.transition = "opacity 0.3s ease";
+
+  // Ekrana ekle
+  document.body.appendChild(popup);
+
+  // Görünür yap
+  requestAnimationFrame(() => {
+    popup.style.opacity = "1";
+  });
+
+  // Otomatik kapat
+  setTimeout(() => {
+    popup.style.opacity = "0";
+    setTimeout(() => {
+      popup.remove();
+    }, 300);
+  }, 3000);
+}
 
 async function registerUser(username) {
   await db.collection("users").doc(username).set({
@@ -87,6 +134,7 @@ let gameStarted = false;
 let player = { x: 200, y: 550, radius: 12, dir: 1, trail: [] };
 let speed = 1.5; // Başlangıç hızı azaltıldı
 let score = 0;
+let lastTime = performance.now(); // FPS farkı için zaman takip
 let isGameOver = false;
 let obstacles = [];
 let powerups = [];
@@ -126,6 +174,19 @@ const obstacleHeight = 20;
 const minGapX = 60; // Minimum kenar boşluğu artırıldı
 let maxGapX = canvas.width - gapSize - 60;
 const minVerticalSpacing = 160; // Dikey boşluk artırıldı
+
+function showWelcomePopup(message) {
+  const popup = document.getElementById("welcomePopup");
+  if (!popup) return;
+
+  popup.textContent = message;
+  popup.style.display = "block";
+
+  // Kapatmak için bekle
+  setTimeout(() => {
+    popup.style.display = "none";
+  }, 3000);
+}
 
 function resizeCanvas() {
   const gameContainer = document.getElementById("game");
@@ -305,12 +366,40 @@ if (returnToMenuBtn) {
   });
 }
 
-function showNotification(text) {
+function showNotification(text, type = "error") {
+  const notification = document.getElementById("notification");
+  if (!notification) {
+    console.warn("❌ #notification elementi bulunamadı");
+    return;
+  }
+
   notification.textContent = text;
   notification.style.display = "block";
+  
+  // Mesaj türüne göre renk
+  switch(type) {
+    case "success":
+      notification.style.backgroundColor = "#4CAF50"; // Yeşil
+      break;
+    case "warning":
+      notification.style.backgroundColor = "#FF9800"; // Turuncu
+      break;
+    case "error":
+    default:
+      notification.style.backgroundColor = "#f44336"; // Kırmızı
+      break;
+  }
+  
+  notification.style.color = "white";
+
+  // Fade animasyonu
+  notification.classList.remove("fade-in");
+  void notification.offsetWidth;
+  notification.classList.add("fade-in");
+
   setTimeout(() => {
     notification.style.display = "none";
-  }, 2500);
+  }, 3000);
 }
 
 function createParticles(x, y, color) {
@@ -357,9 +446,9 @@ function createPowerup() {
   }
 }
 
-function drawPowerups() {
+function drawPowerups(deltaTime) {
   for (let p of powerups) {
-    p.y += speed;
+    p.y += speed * deltaTime;
     ctx.save();
     ctx.font = "20px Arial";
     ctx.textAlign = "center";
@@ -753,7 +842,7 @@ function drawPlayer() {
   ctx.restore();
 }
 
-function drawObstacles() {
+function drawObstacles(deltaTime) {
   ctx.save();
   ctx.fillStyle = "rgba(255,255,255,0.9)";
   ctx.shadowColor = "#13294B";
@@ -767,7 +856,7 @@ function drawObstacles() {
       canvas.width - (obs.gapX + gapSize),
       obstacleHeight
     );
-    obs.y += speed;
+    obs.y += speed * deltaTime;
 
     if (!obs.passed && obs.y > player.y) {
       obs.passed = true;
@@ -828,7 +917,8 @@ function updateLevel() {
   const newLevel = Math.floor(score / 200) + 1; // Level artışı yavaşlatıldı
   if (newLevel > level) {
     level = newLevel;
-    speed += 0.15; // Hız artışı azaltıldı
+   speed += 9 * (1 / 60); // FPS ne olursa olsun yaklaşık 0.15 gibi artar
+
     showNotification(`🆙 Seviye ${level}!`);
     createParticles(player.x, player.y, "#00FF00");
   }
@@ -870,27 +960,26 @@ function updateUI() {
 
 function draw() {
   if (isGameOver || !gameStarted) {
-    console.log(
-      "Draw durduruldu - isGameOver:",
-      isGameOver,
-      "gameStarted:",
-      gameStarted
-    );
     return;
   }
 
   try {
+    // ZAMAN FARKINI HESAPLA
+    const now = performance.now();
+    const deltaTime = (now - lastTime) / 1000; // saniye cinsinden
+    lastTime = now;
+
     ctx.clearRect(0, 0, canvas.width, canvas.height);
     drawBackgroundElements();
     drawPlayer();
-    drawObstacles();
-    drawPowerups();
+    drawObstacles(deltaTime); // parametre ile gönderilecek
+    drawPowerups(deltaTime); // parametre ile gönderilecek
     drawParticles();
     updateParticles();
 
     // Oyuncu hareketi
     const moveSpeed = speed * 1.2;
-    player.x += player.dir * moveSpeed;
+    player.x += player.dir * moveSpeed * deltaTime;
 
     // Kenarlarda zıplama
     if (
@@ -905,27 +994,10 @@ function draw() {
       createParticles(player.x, player.y, "#ffffff");
     }
 
-    // Çarpışma kontrolü - DEBUG EKLENDI
+    // Çarpışma kontrolü
     try {
       if (checkCollision()) {
-        console.log("🔴 ÇARPIŞMA TESPİT EDİLDİ!");
-        console.log("Player pozisyon:", player.x, player.y);
-        console.log("isGameOver öncesi:", isGameOver);
-        console.log("gameStarted öncesi:", gameStarted);
-
         gameOver();
-
-        console.log("gameOver() çağrıldıktan sonra:");
-        console.log("isGameOver:", isGameOver);
-        console.log("gameStarted:", gameStarted);
-
-        // Game over div kontrolü
-        const gameOverDiv = document.getElementById("gameOver");
-        console.log("gameOverDiv bulundu mu:", !!gameOverDiv);
-        if (gameOverDiv) {
-          console.log("gameOverDiv display değeri:", gameOverDiv.style.display);
-        }
-
         return;
       }
     } catch (error) {
@@ -933,7 +1005,7 @@ function draw() {
     }
 
     // Skor artışı
-    score += 0.1 * combo;
+    score += 0.1 * combo * deltaTime;
     updateLevel();
     updateUI();
 
@@ -953,13 +1025,14 @@ function draw() {
       (obs) => obs.y < canvas.height + obstacleHeight
     );
 
-    // Animation frame kaydet
+    // Devam et
     animationId = requestAnimationFrame(draw);
   } catch (error) {
     console.log("Draw function error:", error);
     gameOver();
   }
 }
+
 
 // Instagram Paylaşım Fonksiyonu
 function shareScore() {
@@ -1121,7 +1194,7 @@ canvas.addEventListener(
     e.preventDefault();
     if (!isGameOver && gameStarted) {
       player.dir *= -1;
-      speed += 0.01; // Hız artışı azaltıldı
+     speed += 0.5 * (1 / 60); // Sabit değer gibi davranır (ortalama 60 FPS'e göre)
       createParticles(player.x, player.y, "#ffffff");
     }
   },
@@ -1131,7 +1204,7 @@ canvas.addEventListener(
 canvas.addEventListener("click", () => {
   if (!isGameOver && gameStarted) {
     player.dir *= -1;
-    speed += 0.01; // Hız artışı azaltıldı
+    speed += 0.5 * (1 / 60); // Sabit değer gibi davranır (ortalama 60 FPS'e göre)
     createParticles(player.x, player.y, "#ffffff");
   }
 });
@@ -1144,7 +1217,8 @@ document.addEventListener("keydown", (e) => {
   ) {
     e.preventDefault();
     player.dir *= -1;
-    speed += 0.01; // Hız artışı azaltıldı
+    speed += 0.5 * (1 / 60); // ✅ Sabit hız artışı
+
     createParticles(player.x, player.y, "#ffffff");
   }
 });
@@ -1224,53 +1298,192 @@ async function handleAdvancedLogin() {
   const loginError = document.getElementById("loginError");
   const loginBtn = document.getElementById("loginBtn");
 
-  const username = usernameInput.value.trim();
+  const username = usernameInput.value.trim().toLowerCase();
+  const storedUser = localStorage.getItem("currentUser");
+  let knownUsers = JSON.parse(localStorage.getItem("knownUsers") || "{}");
 
   if (!username) {
-    loginError.textContent = "Lütfen kullanıcı adınızı girin.";
+    showNotification("⚠️ Lütfen kullanıcı adınızı girin.", "warning");
     return;
   }
 
   try {
-    // Loading state
     loginBtn.disabled = true;
     loginBtn.innerHTML = '<span class="btn-icon">⏳</span> Kontrol ediliyor...';
 
-    // Kullanıcının mevcut olup olmadığını kontrol et
     const userSnapshot = await db.collection("users").doc(username).get();
 
-    if (userSnapshot.exists) {
-      // Mevcut kullanıcı - giriş yap ve verilerini al
-      const userData = userSnapshot.data();
-      currentUser = username;
-      currentUserTotalScore = userData.totalScore || 0; // Toplam skoru al
-
-      localStorage.setItem("currentUser", currentUser);
-      showStartScreen();
-      showNotification(
-        `🎉 Tekrar hoş geldin, ${username}! Toplam skor: ${currentUserTotalScore}`
-      );
-    } else {
-      // Yeni kullanıcı - kayıt et
-      await registerUser(username);
-      currentUser = username;
-      currentUserTotalScore = 0; // Yeni kullanıcı için 0
-
-      localStorage.setItem("currentUser", currentUser);
-      showStartScreen();
-      showNotification(`🎊 Hoş geldin, ${username}! İlk kez oyun oynuyorsun.`);
+    // Bu kullanıcı başka cihazda kayıtlıysa → izin verme
+    if (userSnapshot.exists && !knownUsers[username]) {
+      showModernPopup("Bu kullanıcı adı başka bir cihazda kayıtlı. Lütfen farklı bir kullanıcı adı seçin.", "error");
+      showNotification("❌ Bu kullanıcı adı bu cihaza ait değil.", "error");
+      loginError.textContent = "Bu kullanıcı adı bu cihaza ait değil.";
+      loginError.style.color = "#f44336";
+      return;
     }
+
+    // Yeni kullanıcı mı?
+    let isFirstTime = false;
+    if (!userSnapshot.exists) {
+      await registerUser(username);
+      isFirstTime = true;
+    }
+
+    // Kullanıcıyı tanımla
+    currentUser = username;
+    currentUserTotalScore = userSnapshot.data()?.totalScore || 0;
+
+    // Kullanıcıyı yerelde kaydet
+    knownUsers[username] = true;
+    localStorage.setItem("knownUsers", JSON.stringify(knownUsers));
+    localStorage.setItem("currentUser", currentUser);
+
+    // Giriş ekranını kapat, başlangıcı göster
+    showStartScreen();
+
+    // Karşılama mesajı
+    const welcomeText = isFirstTime
+      ? `🎊 Hoş geldin, ${username}! İlk kez oyun oynuyorsun.`
+      : `🎉 Tekrar hoş geldin, ${username}!`;
+
+    showNotification(welcomeText, "success");
+
+    // Popup animasyonlu göster
+    const uppercaseUsername = username.toLocaleUpperCase("tr-TR");
+
+    showWelcomePopup(
+      isFirstTime
+        ? `🎊 Hoş geldin ${username.toUpperCase("tr-TR")}!`
+        : `🎉 Tekrar hoş geldin ${username.toUpperCase("tr-TR")}!`
+    );
+
+    // Sayfada karşılama metni güncelle (isteğe bağlı)
+    const welcomeMessage = document.getElementById("welcomeMessage");
+    if (welcomeMessage) {
+      welcomeMessage.textContent = welcomeText;
+    }
+
   } catch (error) {
     console.error("Login hatası:", error);
-    loginError.textContent =
-      error.message || "Bir hata oluştu, tekrar deneyin.";
-    loginError.style.color = "#f44336";
+    showNotification("🚨 Giriş hatası oluştu. Lütfen tekrar deneyin.", "error");
   } finally {
-    // Button'u normal haline döndür
     loginBtn.disabled = false;
     loginBtn.innerHTML = '<span class="btn-icon">💾</span> Kaydet ve Başla';
   }
 }
+
+
+
+
+// Modern popup fonksiyonu
+function showModernPopup(message, type = 'error') {
+  // Overlay oluştur
+  const overlay = document.createElement('div');
+  overlay.style.cssText = `
+    position: fixed;
+    top: 0;
+    left: 0;
+    width: 100%;
+    height: 100%;
+    background: rgba(0, 0, 0, 0.5);
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    z-index: 10000;
+    animation: fadeIn 0.2s ease;
+  `;
+
+  // Popup içeriği
+  const popup = document.createElement('div');
+  const iconMap = { error: '❌', warning: '⚠️', success: '✅' };
+  
+  popup.style.cssText = `
+    background: white;
+    border-radius: 15px;
+    padding: 25px;
+    max-width: 350px;
+    width: 90%;
+    text-align: center;
+    box-shadow: 0 10px 30px rgba(0, 0, 0, 0.3);
+    animation: slideIn 0.3s ease;
+  `;
+
+  popup.innerHTML = `
+    <div style="font-size: 40px; margin-bottom: 15px;">${iconMap[type] || '❌'}</div>
+    <div style="font-size: 16px; color: #333; margin-bottom: 20px; line-height: 1.4;">${message}</div>
+    <button onclick="this.closest('[data-popup]').remove()" 
+            style="background: linear-gradient(45deg, #667eea, #764ba2); color: white; border: none; 
+                   padding: 10px 25px; border-radius: 20px; font-size: 14px; font-weight: 600; 
+                   cursor: pointer; transition: transform 0.2s ease;"
+            onmouseover="this.style.transform='translateY(-1px)'" 
+            onmouseout="this.style.transform='translateY(0)'">Tamam</button>
+  `;
+
+  overlay.setAttribute('data-popup', 'true');
+  overlay.appendChild(popup);
+  
+  // CSS animasyonları ekle
+  if (!document.querySelector('#popup-animations')) {
+    const style = document.createElement('style');
+    style.id = 'popup-animations';
+    style.textContent = `
+      @keyframes fadeIn { from { opacity: 0; } to { opacity: 1; } }
+      @keyframes slideIn { from { transform: scale(0.8) translateY(-20px); opacity: 0; } 
+                          to { transform: scale(1) translateY(0); opacity: 1; } }
+    `;
+    document.head.appendChild(style);
+  }
+
+  document.body.appendChild(overlay);
+  
+  // ESC ile kapatma
+  const closeOnEsc = (e) => {
+    if (e.key === 'Escape') {
+      overlay.remove();
+      document.removeEventListener('keydown', closeOnEsc);
+    }
+  };
+  document.addEventListener('keydown', closeOnEsc);
+}
+// Güncellenmiş showNotification fonksiyonu
+function showNotification(text, type = "error") {
+  const notification = document.getElementById("notification");
+  if (!notification) {
+    
+    console.warn("❌ #notification elementi bulunamadı");
+    return;
+  }
+
+  notification.textContent = text;
+  notification.style.display = "block";
+  
+  // Mesaj türüne göre renk ayarlama
+  switch(type) {
+    case "success":
+      notification.style.backgroundColor = "#4CAF50"; // Yeşil
+      break;
+    case "warning":
+      notification.style.backgroundColor = "#FF9800"; // Turuncu
+      break;
+    case "error":
+    default:
+      notification.style.backgroundColor = "#f44336"; // Kırmızı
+      break;
+  }
+  
+  notification.style.color = "white";
+
+  // Fade animasyonu
+  notification.classList.remove("fade-in");
+  void notification.offsetWidth; // Reflow zorlamak için
+  notification.classList.add("fade-in");
+
+  setTimeout(() => {
+    notification.style.display = "none";
+  }, 3000);
+}
+
+
 
 function changeUser() {
   // Mevcut oyunu durdur
@@ -1282,15 +1495,19 @@ function changeUser() {
   gameStarted = false;
   isGameOver = false;
 
+  // Şu anki kullanıcıyı unut (cihaz geçmişi saklanacak)
+  localStorage.removeItem("currentUser");
+
   // Login ekranına dön
   showLoginScreen();
 
-  // Input'u temizle
+  // Giriş alanını temizle
   const usernameInput = document.getElementById("usernameInput");
   if (usernameInput) {
     usernameInput.value = "";
   }
 }
+
 
 // DOMContentLoaded event listener'ı - TEK YER!
 document.addEventListener("DOMContentLoaded", async function () {
@@ -1418,15 +1635,15 @@ document.addEventListener("DOMContentLoaded", async function () {
 
 function showStartScreen() {
   document.getElementById("loginScreen").style.display = "none";
-  document.getElementById("startScreen").style.display = "flex";
-  document.getElementById("hud").style.display = "none";
-  document.getElementById("gameOver").style.display = "none";
+  document.getElementById("startScreen").style.display = "block";
 
-  // Hoş geldin mesajını Firebase'den gelen güncel veri ile güncelle
-  
+  // Giriş yapan kullanıcıyı al
+  const welcomeUser = currentUser || localStorage.getItem("currentUser") || "Oyuncu";
+
+  // Mesajı güncelle
   const welcomeMessage = document.getElementById("welcomeMessage");
-  if (welcomeMessage && currentUser) {
-    welcomeMessage.textContent = `Hoş geldin, ${currentUser}! Toplam skor: ${currentUserTotalScore}`;
+  if (welcomeMessage) {
+    welcomeMessage.textContent = `🎉 Hoş geldin, ${welcomeUser}!`;
   }
 }
 

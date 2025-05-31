@@ -902,6 +902,69 @@ body::before {
         opacity: 1;
     }
 }
+.welcome-popup {
+  position: fixed;
+  top: 50%;
+  left: 50%;
+  transform: translate(-50%, -50%);
+  background: #4caf50;
+  color: white;
+  font-size: 24px;
+  font-weight: bold;
+  padding: 20px 30px;
+  border-radius: 12px;
+  box-shadow: 0 4px 20px rgba(0, 0, 0, 0.3);
+  z-index: 9999;
+  opacity: 0;
+  animation: fadeInOut 3s ease-in-out forwards;
+  text-align: center;
+  max-width: 90%;
+  width: fit-content;
+}
+
+@keyframes fadeInOut {
+  0% {
+    opacity: 0;
+    transform: translate(-50%, -60%);
+  }
+  15% {
+    opacity: 1;
+    transform: translate(-50%, -50%);
+  }
+  85% {
+    opacity: 1;
+  }
+  100% {
+    opacity: 0;
+    transform: translate(-50%, -40%);
+  }
+}
+
+
+.welcome-text {
+  font-size: 18px;
+  font-weight: 600;
+  color: #ffffff;
+  background-color: #2196f3;
+  text-align: center;
+  padding: 10px 16px;
+  margin: 10px auto 20px auto;
+  border-radius: 8px;
+  width: 90%;
+  max-width: 500px;
+  box-shadow: 0 4px 8px rgba(0,0,0,0.2);
+  word-break: break-word;
+}
+
+/* Responsive: Küçük ekranlar için */
+@media (max-width: 480px) {
+  .welcome-text {
+    font-size: 16px;
+    padding: 8px 12px;
+    margin-top: 8px;
+  }
+}
+
 
 /* ===== Scrollbar Styles ===== */
 ::-webkit-scrollbar {
@@ -1145,7 +1208,20 @@ body::before {
         animation: none;
     }
 }
-
+#loginError {
+  padding: 8px 12px;
+  margin-top: 10px;
+  background-color: #fdecea;
+  color: #b71c1c;
+  border: 1px solid #f44336;
+  border-radius: 6px;
+  font-weight: bold;
+  animation: fadeIn 0.3s ease-in-out;
+}
+@keyframes fadeIn {
+  from { opacity: 0; transform: translateY(-5px); }
+  to { opacity: 1; transform: translateY(0); }
+}
 /* ===== Focus Styles for Accessibility ===== */
 .btn:focus-visible,
 button:focus-visible {

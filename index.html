@@ -15,26 +15,24 @@
       rel="stylesheet"
     />
     <link rel="stylesheet" href="style.css" />
-   <!-- Firebase Uyumlu (compat) sürümler -->
-<script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-app-compat.js"></script>
-<script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-firestore-compat.js"></script>
-
+    <!-- Firebase Uyumlu (compat) sürümler -->
+    <script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-app-compat.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-firestore-compat.js"></script>
 
     <script>
-  const firebaseConfig = {
-    apiKey: "AIzaSyBfpvlGZ1g1jRG2ps2rGP3OC3WBU2sxXnI",
-    authDomain: "zigzaggame-e8cc5.firebaseapp.com",
-    projectId: "zigzaggame-e8cc5",
-    storageBucket: "zigzaggame-e8cc5.appspot.com",
-    messagingSenderId: "990084578788",
-    appId: "1:990084578788:web:4e50ace7bb733c99381bf1"
-  };
+      const firebaseConfig = {
+        apiKey: "AIzaSyBfpvlGZ1g1jRG2ps2rGP3OC3WBU2sxXnI",
+        authDomain: "zigzaggame-e8cc5.firebaseapp.com",
+        projectId: "zigzaggame-e8cc5",
+        storageBucket: "zigzaggame-e8cc5.appspot.com",
+        messagingSenderId: "990084578788",
+        appId: "1:990084578788:web:4e50ace7bb733c99381bf1",
+      };
 
-  // Firebase’i başlat
-  firebase.initializeApp(firebaseConfig);
-  const db = firebase.firestore();
-</script>
-
+      // Firebase’i başlat
+      firebase.initializeApp(firebaseConfig);
+      const db = firebase.firestore();
+    </script>
   </head>
   <body>
     <!-- Ana Oyun Konteyneri -->
@@ -77,41 +75,40 @@
       </section>
 
       <!-- Başlangıç Ekranı -->
-      <section id="startScreen" style="display: none">
-        
+<!-- Başlangıç Ekranı -->
+<section id="startScreen" style="display: none">
+ 
 
-        <img
-          src="https://panel.gelisim.edu.tr/assets/2022/resimler/ogrencidekanligi/odlogopng5_cdff79132e484ba28b5ff3e7d50d19c9.png"
-          alt="İstanbul Gelişim Üniversitesi Logo"
-          id="logoImage"
-        />
-        <div class="content-wrapper">
-          <h1 id="gameTitle">
-            <span class="title-icon">🎯</span>
-            ZigZag Rota
-          </h1>
+  <!-- Karşılama Mesajı -->
+  
+ <img
+    src="https://panel.gelisim.edu.tr/assets/2022/resimler/ogrencidekanligi/odlogopng5_cdff79132e484ba28b5ff3e7d50d19c9.png"
+    alt="İstanbul Gelişim Üniversitesi Logo"
+    id="logoImage"
+  />
+  <div class="content-wrapper">
+    <h1 id="gameTitle">
+      <span class="title-icon">🎯</span>
+      ZigZag Rota
+    </h1>
 
-          <p id="gameSubtitle">İstanbul Gelişim Üniversitesi</p>
-         
+    <p id="gameSubtitle">İstanbul Gelişim Üniversitesi</p>
 
-          <div class="button-group">
-            <button id="showAchievementsBtn" class="btn btn-secondary">
-              <span class="btn-icon">🏆</span>
-              Başarılar
-            </button>
+    <div class="button-group">
+      <button id="showAchievementsBtn" class="btn btn-secondary">
+        <span class="btn-icon">🏆</span> Başarılar
+      </button>
+      <button id="startButtonMain" class="btn btn-primary">
+        <span class="btn-icon">🚀</span> Oyuna Başla
+      </button>
+      <button id="changeUserBtn" class="btn btn-accent">
+        <span class="btn-icon">👤</span> Kullanıcı Değiştir
+      </button>
+    </div>
+  </div>
+</section>
 
-            <button id="startButtonMain" class="btn btn-primary">
-              <span class="btn-icon">🚀</span>
-              Oyuna Başla
-            </button>
 
-            <button id="changeUserBtn" class="btn btn-accent">
-              <span class="btn-icon">👤</span>
-              Kullanıcı Değiştir
-            </button>
-          </div>
-        </div>
-      </section>
 
       <!-- Oyun HUD'ı -->
       <div id="hud">
@@ -139,7 +136,18 @@
       <canvas id="canvas"></canvas>
 
       <!-- Bildirim Alanı -->
-      <div id="notification"></div>
+      <div
+        id="notification"
+        style="
+          display: none;
+          background: #f44336;
+          color: white;
+          padding: 10px;
+          margin-top: 10px;
+          text-align: center;
+          border-radius: 6px;
+        "
+      ></div>
 
       <!-- Başarılar Listesi Modal -->
       <div id="scoreList" class="modal">
@@ -183,7 +191,8 @@
         </div>
       </div>
     </div>
-
+<div id="welcomePopup" class="welcome-popup" style="display: none;"></div>
+    <!-- Kullanıcı Değiştirme Modal -->
     <script src="script.js" defer></script>
   </body>
 </html>
