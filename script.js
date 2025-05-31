@@ -130,12 +130,13 @@ const canvas = document.getElementById("canvas");
 const ctx = canvas.getContext("2d");
 
 // Oyun durumu
+let lastTime = performance.now(); // FPS farkı için zaman takip
+
 let gameStarted = false;
 let player = { x: 200, y: 550, radius: 12, dir: 1, trail: [] };
 let speed = 1.5; // Başlangıç hızı azaltıldı
 let score = 0;
-let lastTime = performance.now(); // FPS farkı için zaman takip
-let isGameOver = false;
+ let isGameOver = false;
 let obstacles = [];
 let powerups = [];
 let particles = [];
@@ -201,7 +202,13 @@ function resizeCanvas() {
   }
 }
 
+
 function startGame() {
+  lastTime = performance.now(); // FPS normalizasyonu için
+  
+  console.log("✅ startGame çalıştı");
+  console.log("gameStarted:", gameStarted, "isGameOver:", isGameOver);
+
   // Önceki oyunu temizle
   if (animationId) {
     cancelAnimationFrame(animationId);
@@ -219,6 +226,7 @@ function startGame() {
   checkDailyStreak();
   draw();
 }
+
 
 function resetGameVariables() {
   player = {
@@ -448,7 +456,7 @@ function createPowerup() {
 
 function drawPowerups(deltaTime) {
   for (let p of powerups) {
-    p.y += speed * deltaTime;
+    p.y += speed * deltaTime*60; // FPS normalizasyonu için çarpıldı
     ctx.save();
     ctx.font = "20px Arial";
     ctx.textAlign = "center";
@@ -856,7 +864,7 @@ function drawObstacles(deltaTime) {
       canvas.width - (obs.gapX + gapSize),
       obstacleHeight
     );
-    obs.y += speed * deltaTime;
+    obs.y += speed * deltaTime*60; // FPS normalizasyonu için çarpıldı
 
     if (!obs.passed && obs.y > player.y) {
       obs.passed = true;
@@ -959,6 +967,8 @@ function updateUI() {
 }
 
 function draw() {
+  console.log("🎬 draw fonksiyonu başladı");
+
   if (isGameOver || !gameStarted) {
     return;
   }
@@ -969,17 +979,20 @@ function draw() {
     const deltaTime = (now - lastTime) / 1000; // saniye cinsinden
     lastTime = now;
 
+    // DeltaTime çok küçükse standart değer kullan (ilk frame için)
+    window.safeDeltaTime = deltaTime > 0.001 ? deltaTime : 1/60; // Global yapıldı
+
     ctx.clearRect(0, 0, canvas.width, canvas.height);
     drawBackgroundElements();
     drawPlayer();
-    drawObstacles(deltaTime); // parametre ile gönderilecek
-    drawPowerups(deltaTime); // parametre ile gönderilecek
+    drawObstacles(window.safeDeltaTime); // parametre eklendi
+    drawPowerups(window.safeDeltaTime); // parametre eklendi
     drawParticles();
     updateParticles();
 
-    // Oyuncu hareketi
-    const moveSpeed = speed * 1.2;
-    player.x += player.dir * moveSpeed * deltaTime;
+    // Oyuncu hareketi - deltaTime 60 FPS'e göre normalize edildi
+    const moveSpeed = speed * 1.2 * 60; // 60 FPS baz alınarak çarpıldı
+    player.x += player.dir * moveSpeed * window.safeDeltaTime;
 
     // Kenarlarda zıplama
     if (
@@ -1004,8 +1017,8 @@ function draw() {
       console.log("Collision check error:", error);
     }
 
-    // Skor artışı
-    score += 0.1 * combo * deltaTime;
+    // Skor artışı - deltaTime 60 FPS'e göre normalize edildi
+    score += (0.1 * combo * 60) * window.safeDeltaTime;
     updateLevel();
     updateUI();
 
@@ -1013,10 +1026,12 @@ function draw() {
     if (Math.random() < 0.005) createPowerup();
 
     // Yeni engel oluşturma
+    console.log("Engel kontrol - obstacles.length:", obstacles.length); // DEBUG
     if (
       obstacles.length === 0 ||
       obstacles.at(-1).y > -minVerticalSpacing * 0.8
     ) {
+      console.log("createObstacle çağrılıyor"); // DEBUG
       createObstacle();
     }
 
