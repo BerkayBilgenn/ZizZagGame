@@ -1334,8 +1334,14 @@ async function handleAdvancedLogin() {
       showNotification("❌ Bu kullanıcı adı bu cihaza ait değil.", "error");
       loginError.textContent = "Bu kullanıcı adı bu cihaza ait değil.";
       loginError.style.color = "#f44336";
+    
+      // 🔽 Bu satırları EKLE
+      loginBtn.disabled = false;
+      loginBtn.innerHTML = '<span class="btn-icon">💾</span> Kaydet ve Başla';
+    
       return;
     }
+    
 
     // Yeni kullanıcı mı?
     let isFirstTime = false;
