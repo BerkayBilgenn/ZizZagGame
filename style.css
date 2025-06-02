@@ -46,7 +46,7 @@
     --radius-md: 0.5rem;
     --radius-lg: 0.75rem;
     --radius-xl: 1rem;
-    --radius-2xl: 1.5rem;
+   
     --radius-full: 9999px;
     
     /* Transitions */
@@ -130,7 +130,7 @@ body::before {
     max-height: 750px;
     background: var(--dark-gradient);
     border: 1px solid var(--glass-border);
-    border-radius: var(--radius-2xl);
+     
     overflow: hidden;
     box-shadow: var(--glass-shadow);
 }
@@ -138,7 +138,7 @@ body::before {
 /* ===== Logo Container ===== */
 #logoContainer {
     position: fixed;
-    top: 80px;  /* BURAYA 80px YAZIN (varsayılan 0 yerine) */
+    top: 120px;  /* BURAYA 80px YAZIN (varsayılan 0 yerine) */
     left: 50%;
     transform: translateX(-50%);
     z-index: 1000;
@@ -169,12 +169,180 @@ body::before {
 
 /* ===== Start Screen ===== */
 #startScreen {
-    display: flex;
-    flex-direction: column;
-    justify-content: center; /* DİKEY ORTALAMA */
-    align-items: center;
-    text-align: center;
-    padding: var(--spacing-xl);
+   position: absolute;
+  top: 0;
+  left: 0;
+  width: 100%;
+  height: 100%;
+  background: rgba(0, 0, 0, 0.95);
+  backdrop-filter: blur(20px);
+  -webkit-backdrop-filter: blur(20px);
+  display: flex;
+  flex-direction: column;
+  justify-content: center;
+  align-items: center;
+  z-index: 100;
+  padding: var(--spacing-xl);
+}
+/* Modern Başarılar Ekranı */
+/* === Score Modal - Merkezde Cam Efektli Kutucuk === */
+#scoreList.modal {
+  position: fixed;
+  top: 50%;
+  left: 50%;
+  transform: translate(-50%, -50%);
+  width: 90vw;
+  max-width: 420px;
+  max-height: 80vh;
+  background: linear-gradient(135deg, rgba(20, 20, 30, 0.98), rgba(10, 10, 15, 0.95));
+  border-radius: 20px;
+  box-shadow: 0 0 30px rgba(0, 255, 213, 0.15);
+  backdrop-filter: blur(20px) saturate(1.5);
+  -webkit-backdrop-filter: blur(20px) saturate(1.5);
+  z-index: 9999;
+  padding: 0;
+  display: none;
+  flex-direction: column;
+  overflow: hidden;
+}
+
+/* === Başlık Alanı === */
+#scoreList .modal-header {
+  background: rgba(0, 0, 0, 0.2);
+  padding: 16px 20px;
+  border-bottom: 1px solid rgba(255, 255, 255, 0.05);
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+}
+
+#scoreList .modal-header h3 {
+  font-size: 1.3rem;
+  font-weight: 700;
+  color: #00ffd5;
+  margin: 0;
+  text-shadow: 0 0 10px rgba(0, 255, 213, 0.2);
+}
+
+#scoreList .close-btn {
+  background: none;
+  border: none;
+  color: white;
+  font-size: 1.5rem;
+  cursor: pointer;
+  transition: opacity 0.3s ease;
+}
+#scoreList .close-btn:hover {
+  opacity: 0.6;
+}
+
+/* === İçerik Alanı === */
+#scoreList .modal-body {
+  padding: 20px;
+  overflow-y: auto;
+  flex: 1;
+}
+
+/* === Lider Tablosu Sıralaması === */
+#scoreItems {
+  list-style: none;
+  padding: 0;
+  margin: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+
+#scoreItems li {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 14px 18px;
+  border-radius: 12px;
+  background: rgba(255, 255, 255, 0.04);
+  font-weight: 600;
+  color: white;
+  font-size: 0.95rem;
+  border-left: 4px solid var(--primary-color, #4facfe);
+  box-shadow: 0 0 8px rgba(0, 0, 0, 0.2);
+}
+
+/* İlk 3’e Özel Görünüm */
+#scoreItems li:nth-child(1) {
+  border-left-color: #ffd700;
+  background: rgba(255, 215, 0, 0.1);
+  color: #ffd700;
+}
+#scoreItems li:nth-child(2) {
+  border-left-color: #c0c0c0;
+  background: rgba(192, 192, 192, 0.1);
+  color: #c0c0c0;
+}
+#scoreItems li:nth-child(3) {
+  border-left-color: #cd7f32;
+  background: rgba(205, 127, 50, 0.1);
+  color: #cd7f32;
+}
+
+/* Sıralama içindeki ad ve skor */
+#scoreItems .name {
+  flex: 1;
+  text-align: left;
+}
+#scoreItems .score {
+  font-weight: bold;
+  font-size: 1rem;
+}
+
+/* === Mobil Uyum (responsive) === */
+@media (max-width: 480px) {
+  #scoreList.modal {
+    width: 95vw;
+    height: 85vh;
+    max-height: 85vh;
+    border-radius: 16px;
+  }
+
+  #scoreItems li {
+    font-size: 0.9rem;
+    padding: 12px 14px;
+  }
+}
+
+.name {
+  flex: 1;
+  text-align: left;
+}
+
+.score {
+  font-weight: bold;
+}
+
+.rank-icon {
+  margin-right: 8px;
+}
+
+
+.name {
+  flex: 1;
+  text-align: left;
+}
+
+.score {
+  font-weight: bold;
+}
+
+
+#startLogoImage {
+  height: 80px;
+  width: auto;
+  max-width: 100%;
+  object-fit: contain;
+  transform: scale(7) translateX(-5px); /* Sola kaydırıldı */
+  transform-origin: center center;
+  margin-bottom: var(--spacing-xl);
+  transition: var(--transition-normal);
+  filter: drop-shadow(0 4px 8px rgba(0, 0, 0, 0.2));
 }
 
 
@@ -367,8 +535,7 @@ body::before {
      #logoContainer {
         max-width: none;
         border-radius: 0;
-        padding-top: calc(var(--spacing-md) + env(safe-area-inset-top) + 40px); /* +40px ekleyin */
-    }
+   padding-top: calc(var(--spacing-md) + env(safe-area-inset-top) + 60px); /* eskiye göre +20px arttırıldı */    }
     .content-wrapper {
         margin-top: 140px; /* BURAYA 140px YAZIN (varsayılan 70px yerine) */
     }
