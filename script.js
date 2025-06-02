@@ -1428,13 +1428,18 @@ async function handleAdvancedLogin() {
     const deviceUsers = JSON.parse(localStorage.getItem("deviceUsers") || "[]");
     const isMyDevice = deviceUsers.includes(username);
     
+    console.log("🔍 Cihaz kullanıcıları:", deviceUsers);
+    console.log("🔍 Aranan kullanıcı:", username);
+    console.log("🔍 Bu cihazda var mı?", isMyDevice);
+    
     // Şu anki localStorage kullanıcısı
     const currentStoredUser = localStorage.getItem("currentUser");
     const previousLoginCount = parseInt(localStorage.getItem("userLoginCount") || "0");
     
     // Eğer şu anda aktif kullanıcıysa ve daha önce giriş yapmışsa
     if (currentStoredUser === username && previousLoginCount > 0) {
-      // Tekrar hoşgeldin - Firebase kontrolü yapmadan devam et
+      console.log("🔄 Aynı kullanıcı tekrar giriş yapıyor");
+      
       currentUser = username;
       
       // Firebase'den güncel skorunu al
@@ -1451,7 +1456,7 @@ async function handleAdvancedLogin() {
       
       showWelcomeBackMessage(username, newLoginCount);
       showStartScreen();
-      return;
+      return; // ✅ Burada çıkış yap
     }
     
     // Firebase'de kullanıcıyı kontrol et
@@ -1459,10 +1464,10 @@ async function handleAdvancedLogin() {
     const userDoc = await userRef.get();
     
     if (userDoc.exists) {
-      // Kullanıcı Firebase'de var
+      console.log("👤 Kullanıcı Firebase'de bulundu");
+      
       if (isMyDevice) {
-        // Bu cihazda daha önce kullanılmış - izin ver
-        console.log("🔄 Kendi cihazındaki eski kullanıcı adına geri dönüyor:", username);
+        console.log("✅ Kendi cihazındaki kullanıcı - izin veriliyor");
         
         // Kullanıcı verilerini al
         const userData = userDoc.data();
@@ -1471,7 +1476,7 @@ async function handleAdvancedLogin() {
         
         // localStorage'ı güncelle
         localStorage.setItem("currentUser", username);
-        localStorage.setItem("userLoginCount", "1"); // Yeniden başlat
+        localStorage.setItem("userLoginCount", "1");
         localStorage.setItem("lastLoginTime", new Date().toISOString());
         
         // Son giriş zamanını güncelle
@@ -1481,15 +1486,19 @@ async function handleAdvancedLogin() {
         
         showWelcomeBackMessage(username, 1);
         showStartScreen();
-        return;
+        return; // ✅ Burada çıkış yap
       } else {
-        // Başka cihazdan kullanılmış - izin verme
+        console.log("❌ Başka cihazda kullanılmış - izin verilmiyor");
+        
+        // HATA: Burada return eksikti!
         alert("⚠️ Bu kullanıcı adı başka bir cihazda kullanılıyor! Lütfen farklı bir kullanıcı adı seçin.");
         usernameInput.focus();
         usernameInput.select();
-        return;
+        return; // ⚠️ Bu satır eksikti - eklendi!
       }
     }
+    
+    console.log("✨ Yeni kullanıcı oluşturuluyor");
     
     // Yeni kullanıcı oluştur
     const userData = {
@@ -1497,7 +1506,7 @@ async function handleAdvancedLogin() {
       totalScore: 0,
       createdAt: firebase.firestore.FieldValue.serverTimestamp(),
       lastLoginAt: firebase.firestore.FieldValue.serverTimestamp(),
-      deviceId: generateDeviceId() // Cihaz kimliği ekle
+      deviceId: generateDeviceId()
     };
     
     await userRef.set(userData);
@@ -1506,6 +1515,7 @@ async function handleAdvancedLogin() {
     if (!deviceUsers.includes(username)) {
       deviceUsers.push(username);
       localStorage.setItem("deviceUsers", JSON.stringify(deviceUsers));
+      console.log("📝 Cihaz kullanıcı listesi güncellendi:", deviceUsers);
     }
     
     // localStorage'a kaydet
@@ -1515,7 +1525,7 @@ async function handleAdvancedLogin() {
     localStorage.setItem("userLoginCount", "1");
     localStorage.setItem("lastLoginTime", new Date().toISOString());
     
-    console.log("✨ Yeni kullanıcı oluşturuldu:", username);
+    console.log("✅ Yeni kullanıcı başarıyla oluşturuldu:", username);
     showFirstTimeWelcome(username);
     showStartScreen();
     
@@ -1524,8 +1534,7 @@ async function handleAdvancedLogin() {
     alert("🚨 İnternet bağlantınızı kontrol edin ve tekrar deneyin.");
     usernameInput.focus();
   }
- }
- 
+}
  // Cihaz kimliği oluşturma fonksiyonu
  function generateDeviceId() {
   let deviceId = localStorage.getItem("deviceId");
