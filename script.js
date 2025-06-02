@@ -3,7 +3,7 @@ document.getElementById("loginBtn").addEventListener("click", async () => {
   const username = document
     .getElementById("usernameInput")
     .value.trim()
-    .toLowerCase();
+    .toLowerCase(); // Küçük harfe çevir
   const errorBox = document.getElementById("loginError");
 
   if (!username) {
@@ -51,6 +51,7 @@ document.getElementById("loginBtn").addEventListener("click", async () => {
     errorBox.textContent = "Bir hata oluştu. Lütfen tekrar deneyin.";
   }
 });
+
 function showModernPopup(message, type = "info") {
   // Önceden varsa sil
   const existing = document.getElementById("modernPopup");
@@ -103,7 +104,7 @@ async function registerUser(username) {
   await db.collection("users").doc(username).set({
     username: username,
     totalScore: 0,
-    bestScore:  0,
+    bestScore: 0,
     gamesPlayed: 0,
     createdAt: firebase.firestore.FieldValue.serverTimestamp()
   });
@@ -136,7 +137,7 @@ let gameStarted = false;
 let player = { x: 200, y: 550, radius: 12, dir: 1, trail: [] };
 let speed = 1.5; // Başlangıç hızı azaltıldı
 let score = 0;
- let isGameOver = false;
+let isGameOver = false;
 let obstacles = [];
 let powerups = [];
 let particles = [];
@@ -191,17 +192,17 @@ function showWelcomePopup(message) {
 function showWelcomeBackMessage(username, loginCount) {
   const lastLogin = localStorage.getItem("lastLoginTime");
   const lastLoginDate = lastLogin ? new Date(lastLogin) : null;
-  
+
   let welcomeMessage = `🎉 Tekrar hoşgeldin, ${username}!`;
-  
+
   if (loginCount > 1) {
     welcomeMessage += `\n🔄 Bu ${loginCount}. girişin.`;
   }
-  
+
   if (lastLoginDate) {
     const timeDiff = new Date() - lastLoginDate;
     const daysDiff = Math.floor(timeDiff / (1000 * 60 * 60 * 24));
-    
+
     if (daysDiff === 0) {
       welcomeMessage += `\n⏰ Bugün tekrar oyuna döndün!`;
     } else if (daysDiff === 1) {
@@ -210,10 +211,10 @@ function showWelcomeBackMessage(username, loginCount) {
       welcomeMessage += `\n📅 ${daysDiff} gün önce son kez oynamıştın.`;
     }
   }
-  
+
   // Hoşgeldin mesajını göster (toast, modal veya alert olarak)
   showWelcomeToast(welcomeMessage);
-  
+
   // Console'a da yazdır
   console.log("🎉 " + welcomeMessage.replace(/\n/g, " "));
 }
@@ -225,7 +226,7 @@ function showFirstTimeWelcome(username) {
 function showWelcomeToast(message) {
   // Eğer sayfanızda toast sistemi varsa onu kullanın
   // Yoksa basit bir alert veya custom modal gösterebilirsiniz
-  
+
   // Örnek: Custom toast div'i oluştur
   const toast = document.createElement('div');
   toast.className = 'welcome-toast';
@@ -244,7 +245,7 @@ function showWelcomeToast(message) {
     white-space: pre-line;
     animation: slideIn 0.5s ease-out;
   `;
-  
+
   // CSS animasyon ekle
   if (!document.querySelector('style[data-toast]')) {
     const style = document.createElement('style');
@@ -261,10 +262,10 @@ function showWelcomeToast(message) {
     `;
     document.head.appendChild(style);
   }
-  
+
   toast.textContent = message;
   document.body.appendChild(toast);
-  
+
   // 5 saniye sonra kaldır
   setTimeout(() => {
     toast.style.animation = 'slideOut 0.5s ease-in';
@@ -274,7 +275,7 @@ function showWelcomeToast(message) {
       }
     }, 500);
   }, 5000);
-  
+
   // Tıklayınca kapat
   toast.addEventListener('click', () => {
     toast.style.animation = 'slideOut 0.5s ease-in';
@@ -302,7 +303,7 @@ function resizeCanvas() {
 
 function startGame() {
   lastTime = performance.now(); // FPS normalizasyonu için
-  
+
   console.log("✅ startGame çalıştı");
   console.log("gameStarted:", gameStarted, "isGameOver:", isGameOver);
 
@@ -480,9 +481,9 @@ function showNotification(text, type = "error") {
 
   notification.textContent = text;
   notification.style.display = "block";
-  
+
   // Mesaj türüne göre renk
-  switch(type) {
+  switch (type) {
     case "success":
       notification.style.backgroundColor = "#4CAF50"; // Yeşil
       break;
@@ -494,7 +495,7 @@ function showNotification(text, type = "error") {
       notification.style.backgroundColor = "#f44336"; // Kırmızı
       break;
   }
-  
+
   notification.style.color = "white";
 
   // Fade animasyonu
@@ -553,7 +554,7 @@ function createPowerup() {
 
 function drawPowerups(deltaTime) {
   for (let p of powerups) {
-    p.y += speed * deltaTime*60; // FPS normalizasyonu için çarpıldı
+    p.y += speed * deltaTime * 60; // FPS normalizasyonu için çarpıldı
     ctx.save();
     ctx.font = "20px Arial";
     ctx.textAlign = "center";
@@ -582,7 +583,7 @@ function drawPowerups(deltaTime) {
 async function gameOver() {
   const gameScore = Math.floor(score);
   console.log("🛑 gameOver başladı | Skor:", gameScore);
-  
+
   // Debug - Değerleri kontrol et
   console.log("🔍 currentUser:", currentUser);
   console.log("🔍 gameScore:", gameScore);
@@ -616,15 +617,15 @@ async function gameOver() {
 
   hud.style.display = "none";
   gameOverDiv.style.display = "block";
-  
+
   console.log("✅ UI elementleri ayarlandı");
 
   try {
     console.log("🔄 Firebase çağrısı başlatılıyor...");
     console.log("📤 Gönderilecek veriler - User:", currentUser, "| Score:", gameScore);
-    
+
     const result = await updateAllUserStatsFirebase(currentUser, gameScore);
-    
+
     console.log("📈 Firebase sonucu alındı:", result);
     console.log("🏆 Yeni rekor mu:", result.isNewRecord);
     console.log("📊 En iyi skor:", result.bestScore);
@@ -663,7 +664,7 @@ async function gameOver() {
     console.error("🔥 Firebase güncelleme hatası:", err);
     console.error("🔥 Hata detayları:", err.message);
     console.error("🔥 Hata stack:", err.stack);
-    
+
     // Hata durumunda UI'yi yine de güncelle (offline durumu için)
     if (finalScore) {
       finalScore.innerHTML = `🎮 Oyun Bitti!<br>Skorun: ${gameScore}`;
@@ -684,10 +685,10 @@ async function updateAllUserStatsFirebase(username, newScore) {
   try {
     console.log(`📤 ${username} için tüm veriler güncelleniyor...`);
     console.log(`🎯 Yeni skor: ${newScore}`);
-    
+
     const userRef = db.collection("users").doc(username);
     const userDoc = await userRef.get();
-    
+
     let userData = {
       bestScore: 0,
       totalScore: 0,
@@ -695,12 +696,12 @@ async function updateAllUserStatsFirebase(username, newScore) {
       username: username,
       createdAt: new Date()
     };
-    
+
     // Mevcut verileri al
     if (userDoc.exists) {
       userData = { ...userData, ...userDoc.data() };
     }
-    
+
     // Güncellemeleri yap
     const updatedData = {
       ...userData,
@@ -708,28 +709,28 @@ async function updateAllUserStatsFirebase(username, newScore) {
       gamesPlayed: (userData.gamesPlayed || 0) + 1,
       lastPlayed: new Date()
     };
-    
+
     // Best score kontrolü
     let isNewRecord = false;
     if (newScore > (userData.bestScore || 0)) {
       updatedData.bestScore = newScore;
       isNewRecord = true;
     }
-    
+
     console.log('📊 Güncellenecek veriler:', updatedData);
-    
+
     // Firebase'e gönder
     await userRef.set(updatedData, { merge: true });
-    
+
     console.log('✅ Firebase güncelleme başarılı');
-    
+
     return {
       isNewRecord: isNewRecord,
       totalScore: updatedData.totalScore,
       gamesPlayed: updatedData.gamesPlayed,
       bestScore: updatedData.bestScore
     };
-    
+
   } catch (error) {
     console.error('❌ Firebase güncelleme hatası:', error);
     return {
@@ -748,10 +749,10 @@ async function showFirebaseScoreList() {
 
     list.innerHTML = "<li>Yükleniyor...</li>";
 
-    // En yüksek skorları çek
+    // En yüksek toplam skorları çek
     const snapshot = await db
       .collection("users")
-      .orderBy("bestScore", "desc")
+      .orderBy("totalScore", "desc")
       .limit(10)
       .get();
 
@@ -765,22 +766,34 @@ async function showFirebaseScoreList() {
         const userData = doc.data();
         const li = document.createElement("li");
 
-        // Emoji ve renk sistemi
-        let rankEmoji = "";
-        if (rank === 1) rankEmoji = "🥇";
-        else if (rank === 2) rankEmoji = "🥈";
-        else if (rank === 3) rankEmoji = "🥉";
-        else rankEmoji = `${rank}.`;
+        // Madalya ve sıralama sistemi         
+        let rankDisplay = "";
+        let rankClass = "";
 
-        li.innerHTML = `
-                   <span class="rank">${rankEmoji}</span>
-                   <span class="username">${userData.username}</span>
-                   <span class="best-score">${userData.bestScore || 0}</span>
-                   <span class="total-score">(Toplam: ${
-                     userData.totalScore || 0
-                   })</span>
-               `;
+        if (rank === 1) {
+          rankDisplay = "🥇";
+          rankClass = "gold-medal";
+        } else if (rank === 2) {
+          rankDisplay = "🥈";
+          rankClass = "silver-medal";
+        } else if (rank === 3) {
+          rankDisplay = "🥉";
+          rankClass = "bronze-medal";
+        } else {
+          rankDisplay = `${rank}.`;
+          rankClass = "normal-rank";
+        }
 
+        // HTML içeriği - Sıra | Kullanıcı Adı | Toplam Skor         
+        li.innerHTML = `           
+          <div class="score-item ${rankClass}">             
+            <span class="rank-badge">${rankDisplay}</span>             
+            <span class="username">${userData.username}</span>             
+            <span class="total-score">${userData.totalScore || 0}</span>           
+          </div>         
+        `;
+
+        // Mevcut kullanıcı vurgusu         
         if (userData.username === currentUser) {
           li.classList.add("current-user");
         }
@@ -792,6 +805,7 @@ async function showFirebaseScoreList() {
 
     const scoreListEl = document.getElementById("scoreList");
     if (scoreListEl) scoreListEl.style.display = "block";
+
   } catch (error) {
     console.error("Skor listesi yükleme hatası:", error);
     const list = document.getElementById("scoreItems");
@@ -818,16 +832,19 @@ async function checkUsernameAvailability(username) {
 
 // Yeni kullanıcı kaydetme
 async function registerUser(username) {
+  const normalizedUsername = username.toLowerCase(); // Küçük harfe çevir
+
   try {
-    // Önce kontrol et
-    const isAvailable = await checkUsernameAvailability(username);
-    if (!isAvailable) {
+    // Kullanıcı adı zaten var mı diye kontrol et
+    const userDoc = await db.collection("users").doc(normalizedUsername).get();
+
+    if (userDoc.exists) {
       throw new Error("Bu kullanıcı adı zaten alınmış!");
     }
 
-    // Kullanıcıyı kaydet
-    await db.collection("users").doc(username).set({
-      username: username,
+    // Yeni kullanıcı kaydını yap
+    await db.collection("users").doc(normalizedUsername).set({
+      username: normalizedUsername,
       createdAt: firebase.firestore.FieldValue.serverTimestamp(),
       totalScore: 0,
       bestScore: 0,
@@ -840,6 +857,7 @@ async function registerUser(username) {
     throw error;
   }
 }
+
 
 // Gerçek zamanlı kullanıcı adı kontrolü
 function setupRealtimeUsernameCheck() {
@@ -961,7 +979,7 @@ function drawObstacles(deltaTime) {
       canvas.width - (obs.gapX + gapSize),
       obstacleHeight
     );
-    obs.y += speed * deltaTime*60; // FPS normalizasyonu için çarpıldı
+    obs.y += speed * deltaTime * 60; // FPS normalizasyonu için çarpıldı
 
     if (!obs.passed && obs.y > player.y) {
       obs.passed = true;
@@ -1022,7 +1040,7 @@ function updateLevel() {
   const newLevel = Math.floor(score / 200) + 1; // Level artışı yavaşlatıldı
   if (newLevel > level) {
     level = newLevel;
-   speed += 9 * (1 / 60); // FPS ne olursa olsun yaklaşık 0.15 gibi artar
+    speed += 9 * (1 / 60); // FPS ne olursa olsun yaklaşık 0.15 gibi artar
 
     showNotification(`🆙 Seviye ${level}!`);
     createParticles(player.x, player.y, "#00FF00");
@@ -1077,7 +1095,7 @@ function draw() {
     lastTime = now;
 
     // DeltaTime çok küçükse standart değer kullan (ilk frame için)
-    window.safeDeltaTime = deltaTime > 0.001 ? deltaTime : 1/60; // Global yapıldı
+    window.safeDeltaTime = deltaTime > 0.001 ? deltaTime : 1 / 60; // Global yapıldı
 
     ctx.clearRect(0, 0, canvas.width, canvas.height);
     drawBackgroundElements();
@@ -1150,9 +1168,8 @@ function draw() {
 function shareScore() {
   const text = `🎯 IGÜ ZigZag Rota'da ${Math.floor(
     score
-  )} puan aldım! 🔥 Seri: ${streak}, 📊 Seviye: ${level} ${
-    currentUser ? `- ${currentUser}` : ""
-  }`;
+  )} puan aldım! 🔥 Seri: ${streak}, 📊 Seviye: ${level} ${currentUser ? `- ${currentUser}` : ""
+    }`;
   const instagramUsername = "ogrenci.dekanligi";
   const instagramUrl = "https://www.instagram.com/ogrenci.dekanligi/";
 
@@ -1264,14 +1281,130 @@ function fallbackCopyTextToClipboard(text) {
 
 // Paylaş butonuna event listener ekle
 document.addEventListener("DOMContentLoaded", function () {
+
+  const overlay = document.getElementById('achievementsOverlay');
+  const toggle = document.getElementById('achievementsToggle');
   const shareBtn = document.getElementById("shareScoreBtn");
+
+  // Toggle butonuna event listener ekle
+  if (toggle) {
+    toggle.addEventListener('click', toggleAchievements);
+  }
+
+  // Overlay'e tıklayınca kapat
+  if (overlay) {
+    overlay.addEventListener('click', toggleAchievements);
+  }
+
+  // ESC tuşu ile kapat
+  document.addEventListener('keydown', function (e) {
+    if (e.key === 'Escape') {
+      const panel = document.getElementById('achievements');
+      if (panel && panel.classList.contains('show')) {
+        toggleAchievements();
+      }
+    }
+  }); // Bu parantez ESC event listener'ını kapatıyor
+
+  // Paylaş butonu event listener
   if (shareBtn) {
     shareBtn.addEventListener("click", shareScore);
     console.log("Paylaş butonu event listener'ı eklendi");
   } else {
     console.error("shareScoreBtn bulunamadı!");
   }
+
+}); // Bu parantez ana DOMContentLoaded event listener'ını kapatıyor
+
+
+// Başarılar listesini güncelle
+async function updateAchievementsList() {
+  try {
+    const scoresRef = db.collection('scores');
+    const snapshot = await scoresRef.orderBy('score', 'desc').limit(10).get();
+
+    const achievementsScroll = document.getElementById('achievementsScroll');
+    achievementsScroll.innerHTML = '';
+
+    if (snapshot.empty) {
+      achievementsScroll.innerHTML = '<div class="no-achievements">Henüz başarı yok</div>';
+      return;
+    }
+
+    let rank = 1;
+    snapshot.forEach(doc => {
+      const data = doc.data();
+      const achievementDiv = createAchievementElement(rank, data.username, data.score);
+      achievementsScroll.appendChild(achievementDiv);
+      rank++;
+    });
+
+  } catch (error) {
+    console.error('Başarılar yüklenirken hata:', error);
+    const achievementsScroll = document.getElementById('achievementsScroll');
+    achievementsScroll.innerHTML = '<div class="error-message">Veriler yüklenemedi</div>';
+  }
+}
+
+// Tek bir başarı elementi oluştur
+function createAchievementElement(rank, username, score) {
+  const achievementDiv = document.createElement('div');
+  achievementDiv.className = 'achievement new';
+
+  achievementDiv.innerHTML = `
+      <div class="achievement-rank">${rank}</div>
+      <div class="achievement-content">
+          <div class="achievement-text">${username}</div>
+          <div class="achievement-score">${score.toLocaleString()} puan</div>
+      </div>
+  `;
+
+  // Animasyonu bitince 'new' sınıfını kaldır
+  setTimeout(() => {
+    achievementDiv.classList.remove('new');
+  }, 800);
+
+  return achievementDiv;
+}
+
+// Stil ekleme fonksiyonu (CSS'yi dinamik eklemek için)
+function addAchievementsStyles() {
+  const style = document.createElement('style');
+  style.textContent = `
+      .no-achievements {
+          text-align: center;
+          color: rgba(255, 255, 255, 0.6);
+          padding: 40px 20px;
+          font-size: 0.9rem;
+      }
+      
+      .error-message {
+          text-align: center;
+          color: #ff4757;
+          padding: 20px;
+          font-size: 0.9rem;
+      }
+  `;
+  document.head.appendChild(style);
+}
+
+
+// Sayfa yüklendiğinde çalışacak
+document.addEventListener('DOMContentLoaded', function () {
+  addAchievementsStyles();
 });
+
+// Mevcut oyun kodunuza entegre etmek için:
+// Oyun bittiğinde bu fonksiyonu çağırın:
+function onGameEnd() {
+  // ... mevcut oyun bitme kodunuz
+
+  // Başarılar listesini güncelle (eğer panel açıksa)
+  const panel = document.getElementById('achievements');
+  if (panel && panel.classList.contains('show')) {
+    updateAchievementsList();
+  }
+}
 
 // Eski tarayıcılar için fallback kopyalama fonksiyonu
 function fallbackCopyTextToClipboard(text) {
@@ -1306,7 +1439,7 @@ canvas.addEventListener(
     e.preventDefault();
     if (!isGameOver && gameStarted) {
       player.dir *= -1;
-     speed += 0.5 * (1 / 60); // Sabit değer gibi davranır (ortalama 60 FPS'e göre)
+      speed += 0.5 * (1 / 60); // Sabit değer gibi davranır (ortalama 60 FPS'e göre)
       createParticles(player.x, player.y, "#ffffff");
     }
   },
@@ -1357,32 +1490,77 @@ function returnToMenu() {
 }
 
 // Skor listesini gösterme fonksiyonu
-function showScoreList() {
-  const list = document.getElementById("scoreItems");
-  if (!list) return;
+async function showScoreList() {
+  try {
+    const list = document.getElementById("scoreItems");
+    if (!list) return;
 
-  list.innerHTML = "";
+    list.innerHTML = "<li>Yükleniyor...</li>";
 
-  // Kullanıcı skorlarını al ve sırala
-  const sortedUsers = Object.entries(userScores)
-    .map(([username, data]) => ({
-      username: username,
-      bestScore: data.bestScore,
-    }))
-    .sort((a, b) => b.bestScore - a.bestScore); // En yüksekten en düşüğe
+    // Firebase'den toplam skorları çek
+    const snapshot = await db
+      .collection("users")
+      .orderBy("totalScore", "desc")
+      .limit(10)
+      .get();
 
-  if (sortedUsers.length === 0) {
-    list.innerHTML = "<li>Henüz hiç kullanıcı yok.</li>";
-  } else {
-    sortedUsers.forEach((user) => {
-      const li = document.createElement("li");
-      li.textContent = `${user.username} = ${user.bestScore}`;
-      list.appendChild(li);
-    });
+    list.innerHTML = "";
+
+    if (snapshot.empty) {
+      list.innerHTML = "<li>Henüz hiç kullanıcı yok.</li>";
+    } else {
+      let rank = 1;
+      snapshot.forEach((doc) => {
+        const userData = doc.data();
+        const li = document.createElement("li");
+
+        // Madalya ve sıralama sistemi
+        let rankDisplay = "";
+        let rankClass = "";
+
+        if (rank === 1) {
+          rankDisplay = "🥇";
+          rankClass = "gold-medal";
+        } else if (rank === 2) {
+          rankDisplay = "🥈";
+          rankClass = "silver-medal";
+        } else if (rank === 3) {
+          rankDisplay = "🥉";
+          rankClass = "bronze-medal";
+        } else {
+          rankDisplay = `${rank}.`;
+          rankClass = "normal-rank";
+        }
+
+        // Sadece toplam skoru göster
+        li.innerHTML = `
+          <div class="score-item ${rankClass}">
+            <span class="rank-badge">${rankDisplay}</span>
+            <span class="username">${userData.username}</span>
+            <span class="total-score">Toplam: ${userData.totalScore || 0}</span>
+          </div>
+        `;
+
+        // Mevcut kullanıcı vurgusu
+        if (userData.username === currentUser) {
+          li.classList.add("current-user");
+        }
+
+        list.appendChild(li);
+        rank++;
+      });
+    }
+
+    const scoreListEl = document.getElementById("scoreList");
+    if (scoreListEl) scoreListEl.style.display = "block";
+
+  } catch (error) {
+    console.error("Skor listesi yükleme hatası:", error);
+    const list = document.getElementById("scoreItems");
+    if (list) {
+      list.innerHTML = "<li>Skor listesi yüklenemedi.</li>";
+    }
   }
-
-  const scoreListEl = document.getElementById("scoreList");
-  if (scoreListEl) scoreListEl.style.display = "block";
 }
 function submitScore() {
   const username = document.getElementById("username").value.trim();
@@ -1409,39 +1587,39 @@ function showLoginScreen() {
 async function handleAdvancedLogin() {
   const usernameInput = document.getElementById("usernameInput");
   const username = usernameInput.value.trim().toLowerCase();
-  
+
   if (!username) {
     alert("Lütfen kullanıcı adınızı girin.");
     usernameInput.focus();
     return;
   }
-  
+
   if (username.length < 3) {
     alert("Kullanıcı adı en az 3 karakter olmalıdır.");
     usernameInput.focus();
     usernameInput.select();
     return;
   }
-  
+
   try {
     // Bu cihazda daha önce kullanılmış kullanıcı adlarını kontrol et
     const deviceUsers = JSON.parse(localStorage.getItem("deviceUsers") || "[]");
     const isMyDevice = deviceUsers.includes(username);
-    
+
     console.log("🔍 Cihaz kullanıcıları:", deviceUsers);
     console.log("🔍 Aranan kullanıcı:", username);
     console.log("🔍 Bu cihazda var mı?", isMyDevice);
-    
+
     // Şu anki localStorage kullanıcısı
     const currentStoredUser = localStorage.getItem("currentUser");
     const previousLoginCount = parseInt(localStorage.getItem("userLoginCount") || "0");
-    
+
     // Eğer şu anda aktif kullanıcıysa ve daha önce giriş yapmışsa
     if (currentStoredUser === username && previousLoginCount > 0) {
       console.log("🔄 Aynı kullanıcı tekrar giriş yapıyor");
-      
+
       currentUser = username;
-      
+
       // Firebase'den güncel skorunu al
       const userRef = db.collection("users").doc(username);
       const userDoc = await userRef.get();
@@ -1449,57 +1627,57 @@ async function handleAdvancedLogin() {
         const userData = userDoc.data();
         currentUserTotalScore = userData.totalScore || 0;
       }
-      
+
       const newLoginCount = previousLoginCount + 1;
       localStorage.setItem("userLoginCount", newLoginCount.toString());
       localStorage.setItem("lastLoginTime", new Date().toISOString());
-      
+
       showWelcomeBackMessage(username, newLoginCount);
       showStartScreen();
       return; // ✅ Burada çıkış yap
     }
-    
+
     // Firebase'de kullanıcıyı kontrol et
     const userRef = db.collection("users").doc(username);
     const userDoc = await userRef.get();
-    
+
     if (userDoc.exists) {
       console.log("👤 Kullanıcı Firebase'de bulundu");
-      
+
       if (isMyDevice) {
         console.log("✅ Kendi cihazındaki kullanıcı - izin veriliyor");
-        
+
         // Kullanıcı verilerini al
         const userData = userDoc.data();
         currentUser = username;
         currentUserTotalScore = userData.totalScore || 0;
-        
+
         // localStorage'ı güncelle
         localStorage.setItem("currentUser", username);
         localStorage.setItem("userLoginCount", "1");
         localStorage.setItem("lastLoginTime", new Date().toISOString());
-        
+
         // Son giriş zamanını güncelle
         await userRef.update({
           lastLoginAt: firebase.firestore.FieldValue.serverTimestamp()
         });
-        
+
         showWelcomeBackMessage(username, 1);
         showStartScreen();
         return; // ✅ Burada çıkış yap
       } else {
         console.log("❌ Başka cihazda kullanılmış - izin verilmiyor");
-        
+
         // HATA: Burada return eksikti!
-        alert("⚠️ Bu kullanıcı adı başka bir cihazda kullanılıyor! Lütfen farklı bir kullanıcı adı seçin.");
+        showModernPopup("⚠️ Bu kullanıcı adı başka bir cihazda kullanılıyor!", "warning");
         usernameInput.focus();
         usernameInput.select();
         return; // ⚠️ Bu satır eksikti - eklendi!
       }
     }
-    
+
     console.log("✨ Yeni kullanıcı oluşturuluyor");
-    
+
     // Yeni kullanıcı oluştur
     const userData = {
       username: username,
@@ -1508,45 +1686,45 @@ async function handleAdvancedLogin() {
       lastLoginAt: firebase.firestore.FieldValue.serverTimestamp(),
       deviceId: generateDeviceId()
     };
-    
+
     await userRef.set(userData);
-    
+
     // Bu cihazın kullanıcı listesine ekle
     if (!deviceUsers.includes(username)) {
       deviceUsers.push(username);
       localStorage.setItem("deviceUsers", JSON.stringify(deviceUsers));
       console.log("📝 Cihaz kullanıcı listesi güncellendi:", deviceUsers);
     }
-    
+
     // localStorage'a kaydet
     currentUser = username;
     currentUserTotalScore = 0;
     localStorage.setItem("currentUser", username);
     localStorage.setItem("userLoginCount", "1");
     localStorage.setItem("lastLoginTime", new Date().toISOString());
-    
+
     console.log("✅ Yeni kullanıcı başarıyla oluşturuldu:", username);
     showFirstTimeWelcome(username);
     showStartScreen();
-    
+
   } catch (error) {
     console.error("❌ Firebase bağlantı hatası:", error);
     alert("🚨 İnternet bağlantınızı kontrol edin ve tekrar deneyin.");
     usernameInput.focus();
   }
 }
- // Cihaz kimliği oluşturma fonksiyonu
- function generateDeviceId() {
+// Cihaz kimliği oluşturma fonksiyonu
+function generateDeviceId() {
   let deviceId = localStorage.getItem("deviceId");
   if (!deviceId) {
     deviceId = 'device_' + Date.now() + '_' + Math.random().toString(36).substr(2, 9);
     localStorage.setItem("deviceId", deviceId);
   }
   return deviceId;
- }
- 
- // Kullanıcı değiştir fonksiyonu da güncellenmeli
- function changeUser() {
+}
+
+// Kullanıcı değiştir fonksiyonu da güncellenmeli
+function changeUser() {
   if (confirm("Kullanıcı değiştirmek istediğinizden emin misiniz?")) {
     // Sadece aktif kullanıcı bilgilerini temizle, cihaz geçmişini koru
     localStorage.removeItem("currentUser");
@@ -1556,7 +1734,7 @@ async function handleAdvancedLogin() {
     currentUserTotalScore = 0;
     showLoginScreen();
   }
- }
+}
 
 // 🗑️ Kullanıcı verilerini temizle
 function clearUserData() {
@@ -1580,16 +1758,16 @@ function showUserStats() {
   const loginCount = localStorage.getItem("userLoginCount") || "0";
   const lastLogin = localStorage.getItem("lastLoginTime");
   const firstLogin = localStorage.getItem("firstLoginTime");
-  
+
   let statsMessage = `📊 ${currentUser} İstatistikleri:\n`;
   statsMessage += `🔄 Toplam giriş: ${loginCount}\n`;
   statsMessage += `🏆 Toplam skor: ${currentUserTotalScore}\n`;
-  
+
   if (lastLogin) {
     const lastDate = new Date(lastLogin).toLocaleDateString('tr-TR');
     statsMessage += `📅 Son giriş: ${lastDate}`;
   }
-  
+
   alert(statsMessage);
 }
 
@@ -1616,7 +1794,7 @@ function showModernPopup(message, type = 'error') {
   // Popup içeriği
   const popup = document.createElement('div');
   const iconMap = { error: '❌', warning: '⚠️', success: '✅' };
-  
+
   popup.style.cssText = `
     background: white;
     border-radius: 15px;
@@ -1641,7 +1819,7 @@ function showModernPopup(message, type = 'error') {
 
   overlay.setAttribute('data-popup', 'true');
   overlay.appendChild(popup);
-  
+
   // CSS animasyonları ekle
   if (!document.querySelector('#popup-animations')) {
     const style = document.createElement('style');
@@ -1655,7 +1833,7 @@ function showModernPopup(message, type = 'error') {
   }
 
   document.body.appendChild(overlay);
-  
+
   // ESC ile kapatma
   const closeOnEsc = (e) => {
     if (e.key === 'Escape') {
@@ -1669,16 +1847,16 @@ function showModernPopup(message, type = 'error') {
 function showNotification(text, type = "error") {
   const notification = document.getElementById("notification");
   if (!notification) {
-    
+
     console.warn("❌ #notification elementi bulunamadı");
     return;
   }
 
   notification.textContent = text;
   notification.style.display = "block";
-  
+
   // Mesaj türüne göre renk ayarlama
-  switch(type) {
+  switch (type) {
     case "success":
       notification.style.backgroundColor = "#4CAF50"; // Yeşil
       break;
@@ -1690,7 +1868,7 @@ function showNotification(text, type = "error") {
       notification.style.backgroundColor = "#f44336"; // Kırmızı
       break;
   }
-  
+
   notification.style.color = "white";
 
   // Fade animasyonu
@@ -1737,32 +1915,32 @@ document.addEventListener("DOMContentLoaded", async function () {
   const storedUser = localStorage.getItem("currentUser");
   const lastLoginTime = localStorage.getItem("lastLoginTime");
   const userLoginCount = parseInt(localStorage.getItem("userLoginCount") || "0");
-  
+
   currentUser = "";
   currentUserTotalScore = 0;
 
   if (storedUser) {
     console.log("🔐 Kaydedilmiş kullanıcı bulundu:", storedUser);
-    
+
     try {
       const userDoc = await db.collection("users").doc(storedUser).get();
       if (userDoc.exists) {
         const userData = userDoc.data();
         currentUser = storedUser;
         currentUserTotalScore = userData.totalScore || 0;
-        
+
         // Login sayısını artır
         const newLoginCount = userLoginCount + 1;
         localStorage.setItem("userLoginCount", newLoginCount.toString());
         localStorage.setItem("lastLoginTime", new Date().toISOString());
-        
+
         console.log("✅ Kullanıcının toplam skoru:", currentUserTotalScore);
         console.log("🔄 Giriş sayısı:", newLoginCount);
-        
+
         // Hoşgeldin mesajını göster - artık her zaman tekrar hoşgeldin der
         // çünkü localStorage'da kayıtlı kullanıcı = daha önce giriş yapmış
         showWelcomeBackMessage(storedUser, newLoginCount);
-        
+
         showStartScreen();
       } else {
         console.warn("⚠️ Kullanıcı Firebase'de bulunamadı");
@@ -1955,12 +2133,19 @@ async function updateUserScoreFirebase(username, gameScore) {
 }
 
 // Skor tablosunu Firebase'den çekme
+// Modern JavaScript Fonksiyonu
 async function showFirebaseScoreList() {
   try {
     const list = document.getElementById("scoreItems");
     if (!list) return;
 
-    list.innerHTML = "<li>Yükleniyor...</li>";
+    // Modern loading state
+    list.innerHTML = `
+      <li class="loading-state">
+        <div class="loading-spinner"></div>
+        <span class="loading-text">Skorlar yükleniyor...</span>
+      </li>
+    `;
 
     // En yüksek skorları çek
     const snapshot = await db
@@ -1972,29 +2157,58 @@ async function showFirebaseScoreList() {
     list.innerHTML = "";
 
     if (snapshot.empty) {
-      list.innerHTML = "<li>Henüz hiç kullanıcı yok.</li>";
+      list.innerHTML = `
+        <li class="empty-state">
+          <div class="empty-icon">🏆</div>
+          <div class="empty-text">Henüz hiç oyuncu yok</div>
+          <div class="empty-subtext">İlk skor sahibi sen ol!</div>
+        </li>
+      `;
     } else {
       let rank = 1;
       snapshot.forEach((doc) => {
         const userData = doc.data();
         const li = document.createElement("li");
 
-        // Emoji ve renk sistemi
-        let rankEmoji = "";
-        if (rank === 1) rankEmoji = "🥇";
-        else if (rank === 2) rankEmoji = "🥈";
-        else if (rank === 3) rankEmoji = "🥉";
-        else rankEmoji = `${rank}.`;
+        // Modern madalya ve sıralama sistemi
+        let rankDisplay = "";
+        let rankClass = "";
+        let rankIcon = "";
 
-        li.innerHTML = `
-                    <span class="rank">${rankEmoji}</span>
-                    <span class="username">${userData.username}</span>
-                    <span class="score">${userData.bestScore}</span>
-                `;
-
-        if (userData.username === currentUser) {
-          li.classList.add("current-user");
+        if (rank === 1) {
+          rankDisplay = "1";
+          rankClass = "rank-gold";
+          rankIcon = "👑";
+        } else if (rank === 2) {
+          rankDisplay = "2";
+          rankClass = "rank-silver";
+          rankIcon = "🥈";
+        } else if (rank === 3) {
+          rankDisplay = "3";
+          rankClass = "rank-bronze";
+          rankIcon = "🥉";
+        } else {
+          rankDisplay = rank;
+          rankClass = "rank-normal";
+          rankIcon = "";
         }
+
+        // Modern HTML içeriği
+        li.innerHTML = `
+  <div class="score-card ${rankClass} ${userData.username === currentUser ? 'current-player' : ''}">
+    <div class="rank-section">
+      <div class="rank-number">${rankDisplay}${rankIcon}</div>
+    </div>
+    <div class="player-info">
+      <div class="player-name">${userData.username}</div>
+      <div class="player-score">Toplam: <strong>${userData.totalScore || 0}</strong></div>
+    </div>
+    <div class="score-trend">
+      ${rank <= 3 ? '<span class="trend-icon trending-up"></span>' : '<span class="trend-icon stable"></span>'}
+    </div>
+  </div>
+`;
+
 
         list.appendChild(li);
         rank++;
@@ -2003,11 +2217,20 @@ async function showFirebaseScoreList() {
 
     const scoreListEl = document.getElementById("scoreList");
     if (scoreListEl) scoreListEl.style.display = "block";
+
   } catch (error) {
     console.error("Skor listesi yükleme hatası:", error);
     const list = document.getElementById("scoreItems");
     if (list) {
-      list.innerHTML = "<li>Skor listesi yüklenemedi.</li>";
+      list.innerHTML = `
+        <li class="error-state">
+          <div class="error-icon">⚠️</div>
+          <div class="error-text">Skorlar yüklenemedi</div>
+          <button class="retry-btn" onclick="showFirebaseScoreList()">
+            <span>🔄</span> Tekrar Dene
+          </button>
+        </li>
+      `;
     }
   }
 }
