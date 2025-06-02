@@ -188,6 +188,103 @@ function showWelcomePopup(message) {
     popup.style.display = "none";
   }, 3000);
 }
+function showWelcomeBackMessage(username, loginCount) {
+  const lastLogin = localStorage.getItem("lastLoginTime");
+  const lastLoginDate = lastLogin ? new Date(lastLogin) : null;
+  
+  let welcomeMessage = `🎉 Tekrar hoşgeldin, ${username}!`;
+  
+  if (loginCount > 1) {
+    welcomeMessage += `\n🔄 Bu ${loginCount}. girişin.`;
+  }
+  
+  if (lastLoginDate) {
+    const timeDiff = new Date() - lastLoginDate;
+    const daysDiff = Math.floor(timeDiff / (1000 * 60 * 60 * 24));
+    
+    if (daysDiff === 0) {
+      welcomeMessage += `\n⏰ Bugün tekrar oyuna döndün!`;
+    } else if (daysDiff === 1) {
+      welcomeMessage += `\n📅 Dün son kez oynamıştın.`;
+    } else if (daysDiff > 1) {
+      welcomeMessage += `\n📅 ${daysDiff} gün önce son kez oynamıştın.`;
+    }
+  }
+  
+  // Hoşgeldin mesajını göster (toast, modal veya alert olarak)
+  showWelcomeToast(welcomeMessage);
+  
+  // Console'a da yazdır
+  console.log("🎉 " + welcomeMessage.replace(/\n/g, " "));
+}
+function showFirstTimeWelcome(username) {
+  const welcomeMessage = `👋 Hoşgeldin, ${username}!\n🎮 İlk kez oynuyorsun, eğlence başlasın!`;
+  showWelcomeToast(welcomeMessage);
+  console.log("👋 İlk kez hoşgeldin:", username);
+}
+function showWelcomeToast(message) {
+  // Eğer sayfanızda toast sistemi varsa onu kullanın
+  // Yoksa basit bir alert veya custom modal gösterebilirsiniz
+  
+  // Örnek: Custom toast div'i oluştur
+  const toast = document.createElement('div');
+  toast.className = 'welcome-toast';
+  toast.style.cssText = `
+    position: fixed;
+    top: 20px;
+    right: 20px;
+    background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+    color: white;
+    padding: 15px 20px;
+    border-radius: 10px;
+    box-shadow: 0 4px 15px rgba(0,0,0,0.3);
+    z-index: 1000;
+    font-family: Arial, sans-serif;
+    max-width: 300px;
+    white-space: pre-line;
+    animation: slideIn 0.5s ease-out;
+  `;
+  
+  // CSS animasyon ekle
+  if (!document.querySelector('style[data-toast]')) {
+    const style = document.createElement('style');
+    style.setAttribute('data-toast', 'true');
+    style.textContent = `
+      @keyframes slideIn {
+        from { transform: translateX(100%); opacity: 0; }
+        to { transform: translateX(0); opacity: 1; }
+      }
+      @keyframes slideOut {
+        from { transform: translateX(0); opacity: 1; }
+        to { transform: translateX(100%); opacity: 0; }
+      }
+    `;
+    document.head.appendChild(style);
+  }
+  
+  toast.textContent = message;
+  document.body.appendChild(toast);
+  
+  // 5 saniye sonra kaldır
+  setTimeout(() => {
+    toast.style.animation = 'slideOut 0.5s ease-in';
+    setTimeout(() => {
+      if (toast.parentNode) {
+        toast.parentNode.removeChild(toast);
+      }
+    }, 500);
+  }, 5000);
+  
+  // Tıklayınca kapat
+  toast.addEventListener('click', () => {
+    toast.style.animation = 'slideOut 0.5s ease-in';
+    setTimeout(() => {
+      if (toast.parentNode) {
+        toast.parentNode.removeChild(toast);
+      }
+    }, 500);
+  });
+}
 
 function resizeCanvas() {
   const gameContainer = document.getElementById("game");
@@ -1308,94 +1405,184 @@ function showLoginScreen() {
 }
 
 // Gelişmiş login fonksiyonu
+// 🔄 Geliştirilmiş login fonksiyonu
 async function handleAdvancedLogin() {
   const usernameInput = document.getElementById("usernameInput");
-  const loginError = document.getElementById("loginError");
-  const loginBtn = document.getElementById("loginBtn");
-
   const username = usernameInput.value.trim().toLowerCase();
-  const storedUser = localStorage.getItem("currentUser");
-
+  
   if (!username) {
-    showNotification("⚠️ Lütfen kullanıcı adınızı girin.", "warning");
+    alert("Lütfen kullanıcı adınızı girin.");
+    usernameInput.focus();
     return;
   }
-
+  
+  if (username.length < 3) {
+    alert("Kullanıcı adı en az 3 karakter olmalıdır.");
+    usernameInput.focus();
+    usernameInput.select();
+    return;
+  }
+  
   try {
-    loginBtn.disabled = true;
-    loginBtn.innerHTML = '<span class="btn-icon">⏳</span> Kontrol ediliyor...';
-
-    const userSnapshot = await db.collection("users").doc(username).get();
-
-    // Bu kullanıcı başka cihazda kayıtlıysa → izin verme
-    if (userSnapshot.exists) {
-      if (knownUsers[username]) {
-        // Bu cihaz zaten biliyor, uyarı verme
-        console.log("✅ Bu kullanıcı bu cihaza zaten kayıtlı.");
+    // Bu cihazda daha önce kullanılmış kullanıcı adlarını kontrol et
+    const deviceUsers = JSON.parse(localStorage.getItem("deviceUsers") || "[]");
+    const isMyDevice = deviceUsers.includes(username);
+    
+    // Şu anki localStorage kullanıcısı
+    const currentStoredUser = localStorage.getItem("currentUser");
+    const previousLoginCount = parseInt(localStorage.getItem("userLoginCount") || "0");
+    
+    // Eğer şu anda aktif kullanıcıysa ve daha önce giriş yapmışsa
+    if (currentStoredUser === username && previousLoginCount > 0) {
+      // Tekrar hoşgeldin - Firebase kontrolü yapmadan devam et
+      currentUser = username;
+      
+      // Firebase'den güncel skorunu al
+      const userRef = db.collection("users").doc(username);
+      const userDoc = await userRef.get();
+      if (userDoc.exists) {
+        const userData = userDoc.data();
+        currentUserTotalScore = userData.totalScore || 0;
+      }
+      
+      const newLoginCount = previousLoginCount + 1;
+      localStorage.setItem("userLoginCount", newLoginCount.toString());
+      localStorage.setItem("lastLoginTime", new Date().toISOString());
+      
+      showWelcomeBackMessage(username, newLoginCount);
+      showStartScreen();
+      return;
+    }
+    
+    // Firebase'de kullanıcıyı kontrol et
+    const userRef = db.collection("users").doc(username);
+    const userDoc = await userRef.get();
+    
+    if (userDoc.exists) {
+      // Kullanıcı Firebase'de var
+      if (isMyDevice) {
+        // Bu cihazda daha önce kullanılmış - izin ver
+        console.log("🔄 Kendi cihazındaki eski kullanıcı adına geri dönüyor:", username);
+        
+        // Kullanıcı verilerini al
+        const userData = userDoc.data();
+        currentUser = username;
+        currentUserTotalScore = userData.totalScore || 0;
+        
+        // localStorage'ı güncelle
+        localStorage.setItem("currentUser", username);
+        localStorage.setItem("userLoginCount", "1"); // Yeniden başlat
+        localStorage.setItem("lastLoginTime", new Date().toISOString());
+        
+        // Son giriş zamanını güncelle
+        await userRef.update({
+          lastLoginAt: firebase.firestore.FieldValue.serverTimestamp()
+        });
+        
+        showWelcomeBackMessage(username, 1);
+        showStartScreen();
+        return;
       } else {
-        // Bu kullanıcı başka cihazdan daha önce girilmiş
-        showModernPopup("Bu kullanıcı adı başka bir cihazda kayıtlı. Lütfen farklı bir kullanıcı adı seçin.", "error");
-        showNotification("❌ Bu kullanıcı adı bu cihaza ait değil.", "error");
-        loginError.textContent = "Bu kullanıcı adı bu cihaza ait değil.";
-        loginError.style.color = "#f44336";
-        loginBtn.disabled = false;
-        loginBtn.innerHTML = '<span class="btn-icon">💾</span> Kaydet ve Başla';
+        // Başka cihazdan kullanılmış - izin verme
+        alert("⚠️ Bu kullanıcı adı başka bir cihazda kullanılıyor! Lütfen farklı bir kullanıcı adı seçin.");
+        usernameInput.focus();
+        usernameInput.select();
         return;
       }
     }
     
+    // Yeni kullanıcı oluştur
+    const userData = {
+      username: username,
+      totalScore: 0,
+      createdAt: firebase.firestore.FieldValue.serverTimestamp(),
+      lastLoginAt: firebase.firestore.FieldValue.serverTimestamp(),
+      deviceId: generateDeviceId() // Cihaz kimliği ekle
+    };
     
-
-    // Yeni kullanıcı mı?
-    let isFirstTime = false;
-    if (!userSnapshot.exists) {
-      await registerUser(username);
-      isFirstTime = true;
+    await userRef.set(userData);
+    
+    // Bu cihazın kullanıcı listesine ekle
+    if (!deviceUsers.includes(username)) {
+      deviceUsers.push(username);
+      localStorage.setItem("deviceUsers", JSON.stringify(deviceUsers));
     }
-
-    // Kullanıcıyı tanımla
+    
+    // localStorage'a kaydet
     currentUser = username;
-    currentUserTotalScore = userSnapshot.data()?.totalScore || 0;
-
-    // Kullanıcıyı yerelde kaydet
-    knownUsers[username] = true;
-    localStorage.setItem("knownUsers", JSON.stringify(knownUsers));
-    localStorage.setItem("currentUser", currentUser);
-
-    // Giriş ekranını kapat, başlangıcı göster
+    currentUserTotalScore = 0;
+    localStorage.setItem("currentUser", username);
+    localStorage.setItem("userLoginCount", "1");
+    localStorage.setItem("lastLoginTime", new Date().toISOString());
+    
+    console.log("✨ Yeni kullanıcı oluşturuldu:", username);
+    showFirstTimeWelcome(username);
     showStartScreen();
-
-    // Karşılama mesajı
-    const welcomeText = isFirstTime
-      ? `🎊 Hoş geldin, ${username}! İlk kez oyun oynuyorsun.`
-      : `🎉 Tekrar hoş geldin, ${username}!`;
-
-    showNotification(welcomeText, "success");
-
-    // Popup animasyonlu göster
-    const uppercaseUsername = username.toLocaleUpperCase("tr-TR");
-
-    showWelcomePopup(
-      isFirstTime
-        ? `🎊 Hoş geldin ${username.toUpperCase("tr-TR")}!`
-        : `🎉 Tekrar hoş geldin ${username.toUpperCase("tr-TR")}!`
-    );
-
-    // Sayfada karşılama metni güncelle (isteğe bağlı)
-    const welcomeMessage = document.getElementById("welcomeMessage");
-    if (welcomeMessage) {
-      welcomeMessage.textContent = welcomeText;
-    }
-
+    
   } catch (error) {
-    console.error("Login hatası:", error);
-    showNotification("🚨 Giriş hatası oluştu. Lütfen tekrar deneyin.", "error");
-  } finally {
-    loginBtn.disabled = false;
-    loginBtn.innerHTML = '<span class="btn-icon">💾</span> Kaydet ve Başla';
+    console.error("❌ Firebase bağlantı hatası:", error);
+    alert("🚨 İnternet bağlantınızı kontrol edin ve tekrar deneyin.");
+    usernameInput.focus();
+  }
+ }
+ 
+ // Cihaz kimliği oluşturma fonksiyonu
+ function generateDeviceId() {
+  let deviceId = localStorage.getItem("deviceId");
+  if (!deviceId) {
+    deviceId = 'device_' + Date.now() + '_' + Math.random().toString(36).substr(2, 9);
+    localStorage.setItem("deviceId", deviceId);
+  }
+  return deviceId;
+ }
+ 
+ // Kullanıcı değiştir fonksiyonu da güncellenmeli
+ function changeUser() {
+  if (confirm("Kullanıcı değiştirmek istediğinizden emin misiniz?")) {
+    // Sadece aktif kullanıcı bilgilerini temizle, cihaz geçmişini koru
+    localStorage.removeItem("currentUser");
+    localStorage.removeItem("lastLoginTime");
+    localStorage.removeItem("userLoginCount");
+    currentUser = "";
+    currentUserTotalScore = 0;
+    showLoginScreen();
+  }
+ }
+
+// 🗑️ Kullanıcı verilerini temizle
+function clearUserData() {
+  localStorage.removeItem("currentUser");
+  localStorage.removeItem("lastLoginTime");
+  localStorage.removeItem("userLoginCount");
+  currentUser = "";
+  currentUserTotalScore = 0;
+}
+
+// 🔄 Kullanıcı değiştir fonksiyonu
+function changeUser() {
+  if (confirm("Kullanıcı değiştirmek istediğinizden emin misiniz?")) {
+    clearUserData();
+    showLoginScreen();
   }
 }
 
+// 📊 Kullanıcı istatistikleri göster
+function showUserStats() {
+  const loginCount = localStorage.getItem("userLoginCount") || "0";
+  const lastLogin = localStorage.getItem("lastLoginTime");
+  const firstLogin = localStorage.getItem("firstLoginTime");
+  
+  let statsMessage = `📊 ${currentUser} İstatistikleri:\n`;
+  statsMessage += `🔄 Toplam giriş: ${loginCount}\n`;
+  statsMessage += `🏆 Toplam skor: ${currentUserTotalScore}\n`;
+  
+  if (lastLogin) {
+    const lastDate = new Date(lastLogin).toLocaleDateString('tr-TR');
+    statsMessage += `📅 Son giriş: ${lastDate}`;
+  }
+  
+  alert(statsMessage);
+}
 
 
 
@@ -1539,22 +1726,38 @@ document.addEventListener("DOMContentLoaded", async function () {
 
   // 🧠 localStorage'dan kullanıcıyı al
   const storedUser = localStorage.getItem("currentUser");
+  const lastLoginTime = localStorage.getItem("lastLoginTime");
+  const userLoginCount = parseInt(localStorage.getItem("userLoginCount") || "0");
+  
   currentUser = "";
   currentUserTotalScore = 0;
 
   if (storedUser) {
     console.log("🔐 Kaydedilmiş kullanıcı bulundu:", storedUser);
+    
     try {
       const userDoc = await db.collection("users").doc(storedUser).get();
       if (userDoc.exists) {
         const userData = userDoc.data();
         currentUser = storedUser;
         currentUserTotalScore = userData.totalScore || 0;
+        
+        // Login sayısını artır
+        const newLoginCount = userLoginCount + 1;
+        localStorage.setItem("userLoginCount", newLoginCount.toString());
+        localStorage.setItem("lastLoginTime", new Date().toISOString());
+        
         console.log("✅ Kullanıcının toplam skoru:", currentUserTotalScore);
+        console.log("🔄 Giriş sayısı:", newLoginCount);
+        
+        // Hoşgeldin mesajını göster - artık her zaman tekrar hoşgeldin der
+        // çünkü localStorage'da kayıtlı kullanıcı = daha önce giriş yapmış
+        showWelcomeBackMessage(storedUser, newLoginCount);
+        
         showStartScreen();
       } else {
         console.warn("⚠️ Kullanıcı Firebase'de bulunamadı");
-        localStorage.removeItem("currentUser");
+        clearUserData();
         showLoginScreen();
       }
     } catch (error) {
@@ -1656,6 +1859,7 @@ document.addEventListener("DOMContentLoaded", async function () {
   if (closeScoreListBtn)
     closeScoreListBtn.addEventListener("click", hideScoreList);
 });
+
 
 function showStartScreen() {
   document.getElementById("loginScreen").style.display = "none";
