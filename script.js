@@ -66,7 +66,7 @@ function showModernPopup(message, type = "info") {
   if (type === "success") bg = "#4caf50";
   if (type === "error") bg = "#f44336";
   if (type === "warning") bg = "#ff9800";
-
+  let knownUsers = JSON.parse(localStorage.getItem("knownUsers") || "{}");
   // Stilleri ekle
   popup.style.position = "fixed";
   popup.style.top = "20px";
@@ -1315,7 +1315,6 @@ async function handleAdvancedLogin() {
 
   const username = usernameInput.value.trim().toLowerCase();
   const storedUser = localStorage.getItem("currentUser");
-  let knownUsers = JSON.parse(localStorage.getItem("knownUsers") || "{}");
 
   if (!username) {
     showNotification("⚠️ Lütfen kullanıcı adınızı girin.", "warning");
@@ -1540,8 +1539,8 @@ document.addEventListener("DOMContentLoaded", async function () {
 
   // 🧠 localStorage'dan kullanıcıyı al
   const storedUser = localStorage.getItem("currentUser");
-  let currentUser = "";
-  let currentUserTotalScore = 0;
+  currentUser = "";
+  currentUserTotalScore = 0;
 
   if (storedUser) {
     console.log("🔐 Kaydedilmiş kullanıcı bulundu:", storedUser);
@@ -1662,15 +1661,18 @@ function showStartScreen() {
   document.getElementById("loginScreen").style.display = "none";
   document.getElementById("startScreen").style.display = "block";
 
-  // Giriş yapan kullanıcıyı al
   const welcomeUser = currentUser || localStorage.getItem("currentUser") || "Oyuncu";
-
-  // Mesajı güncelle
   const welcomeMessage = document.getElementById("welcomeMessage");
+
   if (welcomeMessage) {
-    welcomeMessage.textContent = `🎉 Hoş geldin, ${welcomeUser}!`;
+    const message = knownUsers[welcomeUser]
+      ? `🎉 Tekrar hoş geldin, ${welcomeUser}!`
+      : `🎊 Hoş geldin, ${welcomeUser}!`;
+
+    welcomeMessage.textContent = message;
   }
 }
+
 
 function hideScoreList() {
   const scoreListEl = document.getElementById("scoreList");
