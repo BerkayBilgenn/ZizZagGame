@@ -1329,18 +1329,22 @@ async function handleAdvancedLogin() {
     const userSnapshot = await db.collection("users").doc(username).get();
 
     // Bu kullanıcı başka cihazda kayıtlıysa → izin verme
-    if (userSnapshot.exists && !knownUsers[username]) {
-      showModernPopup("Bu kullanıcı adı başka bir cihazda kayıtlı. Lütfen farklı bir kullanıcı adı seçin.", "error");
-      showNotification("❌ Bu kullanıcı adı bu cihaza ait değil.", "error");
-      loginError.textContent = "Bu kullanıcı adı bu cihaza ait değil.";
-      loginError.style.color = "#f44336";
-    
-      // 🔽 Bu satırları EKLE
-      loginBtn.disabled = false;
-      loginBtn.innerHTML = '<span class="btn-icon">💾</span> Kaydet ve Başla';
-    
-      return;
+    if (userSnapshot.exists) {
+      if (knownUsers[username]) {
+        // Bu cihaz zaten biliyor, uyarı verme
+        console.log("✅ Bu kullanıcı bu cihaza zaten kayıtlı.");
+      } else {
+        // Bu kullanıcı başka cihazdan daha önce girilmiş
+        showModernPopup("Bu kullanıcı adı başka bir cihazda kayıtlı. Lütfen farklı bir kullanıcı adı seçin.", "error");
+        showNotification("❌ Bu kullanıcı adı bu cihaza ait değil.", "error");
+        loginError.textContent = "Bu kullanıcı adı bu cihaza ait değil.";
+        loginError.style.color = "#f44336";
+        loginBtn.disabled = false;
+        loginBtn.innerHTML = '<span class="btn-icon">💾</span> Kaydet ve Başla';
+        return;
+      }
     }
+    
     
 
     // Yeni kullanıcı mı?
