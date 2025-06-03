@@ -66,19 +66,21 @@ async function updateScore(newScore) {
   const userSnap = await userRef.get();
 
   if (userSnap.exists) {
-    const existingScore = userSnap.data().score;
-    if (newScore > existingScore) {
-      await userRef.update({ score: newScore });
+    const existingBest = userSnap.data().bestScore || 0;
+if (newScore > existingBest) {
+  await userRef.update({ bestScore: newScore });
+}
     }
   }
-}
 
 const canvas = document.getElementById("canvas");
 const ctx = canvas.getContext("2d");
 
 // Oyun durumu
 let lastTime = performance.now(); // FPS farkı için zaman takip
-
+let lastPowerupTime = 0;
+const POWERUP_INTERVAL = 5000;   // 5 saniyede bir şans dene
+const POWERUP_CHANCE = 0.2;      // %20 ihtimal
 let gameStarted = false;
 let player = { x: 200, y: 550, radius: 12, dir: 1, trail: [] };
 let speed = 1.5; // Başlangıç hızı azaltıldı
@@ -361,10 +363,13 @@ function restartGame() {
 
   // Oyun değişkenlerini sıfırla
   resetGameVariables();
+  
+  // Power-up timer'ını sıfırla - ÖNEMLİ!
+  lastPowerupTime = 0;
 
   // Oyun durumlarını ayarla
   isGameOver = false;
-  gameStarted = true; // Bu satır eksikti!
+  gameStarted = true;
 
   // UI elementlerini düzenle
   gameOverDiv.style.display = "none";
@@ -495,20 +500,41 @@ function drawParticles() {
   }
 }
 
-function createPowerup() {
-  if (Math.random() < 0.08) {
-    powerups.push({
-      x: Math.random() * (canvas.width - 40) + 20,
-      y: -20,
-      type: Math.random() < 0.5 ? "score" : "slow",
-      collected: false,
-    });
+
+
+function maybeCreatePowerup(timestamp) {
+  // Eğer first call ise lastPowerupTime 0; bu durumda ilk timestamp'ı atıyoruz
+  if (!lastPowerupTime) lastPowerupTime = timestamp;
+
+  // Aradaki süre 5000 ms geçtiyse yeni powerup doğma şansını kontrol et
+  if (timestamp - lastPowerupTime > POWERUP_INTERVAL) {
+    if (Math.random() < POWERUP_CHANCE) {
+      powerups.push({
+        x: Math.random() * (canvas.width - 40) + 20,
+        y: -20,
+        type: Math.random() < 0.5 ? "score" : "slow",
+        collected: false,
+      });
+    }
+    lastPowerupTime = timestamp;
   }
 }
 
+
+const MAX_ACTIVE_POWERUPS = 50; // Fonksiyon dışında tanımla
+
 function drawPowerups(deltaTime) {
   for (let p of powerups) {
+    if (p.collected) continue; // Toplananları atla
+    
     p.y += speed * deltaTime * 60; // FPS normalizasyonu için çarpıldı
+    
+    // Ekran dışına çıktıysa işaretle
+    if (p.y > canvas.height + 50) {
+      p.collected = true;
+      continue;
+    }
+    
     ctx.save();
     ctx.font = "20px Arial";
     ctx.textAlign = "center";
@@ -531,7 +557,10 @@ function drawPowerups(deltaTime) {
     }
   }
 
-  powerups = powerups.filter((p) => p.y < canvas.height + 50 && !p.collected);
+  // Sadece gerektiğinde temizle
+  if (powerups.length > MAX_ACTIVE_POWERUPS) {
+    powerups = powerups.filter(p => !p.collected);
+  }
 }
 // Game over fonksiyonunda Firebase skor güncellemesi
 async function gameOver() {
@@ -893,14 +922,11 @@ function createObstacle() {
   const last = obstacles.at(-1);
   let gapX;
   let attempts = 0;
-
-  // Daha güvenli gap pozisyonu seçimi
   do {
     gapX = Math.random() * (maxGapX - minGapX) + minGapX;
     attempts++;
-    if (attempts > 10) break; // Sonsuz döngüyü engelle
-  } while (last && Math.abs(gapX - last.gapX) < gapSize / 3); // Daha az kısıtlama
-
+    if (attempts > 100) break;
+  } while (last && Math.abs(gapX - last.gapX) < gapSize / 3);
   const y = last ? last.y - minVerticalSpacing : -obstacleHeight;
   obstacles.push({ y, gapX, passed: false });
 }
@@ -942,19 +968,62 @@ function drawObstacles(deltaTime) {
   ctx.shadowBlur = 8;
 
   for (let obs of obstacles) {
+    // Sol engel parçası
     ctx.fillRect(0, obs.y, obs.gapX, obstacleHeight);
+    // Sağ engel parçası
     ctx.fillRect(
       obs.gapX + gapSize,
       obs.y,
       canvas.width - (obs.gapX + gapSize),
       obstacleHeight
     );
-    obs.y += speed * deltaTime * 60; // FPS normalizasyonu için çarpıldı
+    
+    obs.y += speed * deltaTime * 60;
 
+    // AABB Çarpışma Kontrolü
+    const playerRadius = 15; // Oyuncu yarıçapı
+    const playerLeft = player.x - playerRadius;
+    const playerRight = player.x + playerRadius;
+    const playerTop = player.y - playerRadius;
+    const playerBottom = player.y + playerRadius;
+
+    // Sol engel parçası ile çarpışma
+    const leftObstacleRight = obs.gapX;
+    const leftObstacleLeft = 0;
+    const leftObstacleTop = obs.y;
+    const leftObstacleBottom = obs.y + obstacleHeight;
+
+    // Sağ engel parçası ile çarpışma
+    const rightObstacleLeft = obs.gapX + gapSize;
+    const rightObstacleRight = canvas.width;
+    const rightObstacleTop = obs.y;
+    const rightObstacleBottom = obs.y + obstacleHeight;
+
+    // Sol engel ile çarpışma kontrolü
+    const hitLeftObstacle = 
+      playerRight > leftObstacleLeft &&
+      playerLeft < leftObstacleRight &&
+      playerBottom > leftObstacleTop &&
+      playerTop < leftObstacleBottom;
+
+    // Sağ engel ile çarpışma kontrolü
+    const hitRightObstacle = 
+      playerRight > rightObstacleLeft &&
+      playerLeft < rightObstacleRight &&
+      playerBottom > rightObstacleTop &&
+      playerTop < rightObstacleBottom;
+
+    // Çarpışma varsa oyunu bitir
+    if (hitLeftObstacle || hitRightObstacle) {
+      gameOver();
+      return;
+    }
+
+    // Puan verme kontrolü (sadece geçiş için)
     if (!obs.passed && obs.y > player.y) {
       obs.passed = true;
       streak++;
-      combo = Math.min(combo + 0.2, 8); // Combo artışı azaltıldı
+      combo = Math.min(combo + 0.2, 8);
       perfectHits++;
       const centerX = obs.gapX + gapSize / 2;
       const distance = Math.abs(player.x - centerX);
@@ -962,7 +1031,6 @@ function drawObstacles(deltaTime) {
       score += bonus;
 
       if (distance < 30) {
-        // Perfect hit aralığı genişletildi
         const perfectBonus = Math.floor(20 * combo);
         score += perfectBonus;
         createParticles(player.x, player.y, "#FFD700");
@@ -1007,11 +1075,11 @@ function checkAchievements() {
 }
 
 function updateLevel() {
-  const newLevel = Math.floor(score / 200) + 1; // Level artışı yavaşlatıldı
-  if (newLevel > level) {
+  const newLevel = Math.floor(score / 200) + 1;
+  const deltaLevels = newLevel - level;
+  if (deltaLevels > 0) {
     level = newLevel;
-    speed += 9 * (1 / 60); // FPS ne olursa olsun yaklaşık 0.15 gibi artar
-
+    speed += deltaLevels * (9 * (1/60));
     showNotification(`🆙 Seviye ${level}!`);
     createParticles(player.x, player.y, "#00FF00");
   }
@@ -1044,42 +1112,61 @@ function checkCollision() {
   return false;
 }
 
+let prevScoreText = "";
 function updateUI() {
-  if (scoreBoard) scoreBoard.textContent = "Skor: " + Math.floor(score);
-  if (streakDisplay) streakDisplay.textContent = "🔥 Seri: " + streak;
-  if (levelDisplay) levelDisplay.textContent = "📊 Seviye: " + level;
-  if (comboDisplay) comboDisplay.textContent = "⚡ Kombo: x" + combo.toFixed(1);
+  const newScoreText = "Skor: " + Math.floor(score);
+  if (newScoreText !== prevScoreText) {
+    scoreBoard.textContent = newScoreText;
+    prevScoreText = newScoreText;
+  }
+
+  const newLevelText = "📊 Seviye: " + level;
+  if (newLevelText !== levelDisplay.textContent) {
+    levelDisplay.textContent = newLevelText;
+  }
+
+  // ✅ Streak güncelle
+  if (streakDisplay && streakDisplay.textContent !== `🔥 Seri: ${streak}`) {
+    streakDisplay.textContent = `🔥 Seri: ${streak}`;
+  }
+
+  // ✅ Combo güncelle
+  const roundedCombo = combo.toFixed(1);
+  if (comboDisplay && comboDisplay.textContent !== `⚡ Kombo: ${roundedCombo}x`) {
+    comboDisplay.textContent = `⚡ Kombo: ${roundedCombo}x`;
+  }
 }
 
-function draw() {
-  console.log("🎬 draw fonksiyonu başladı");
 
+
+function draw(timestamp) {
   if (isGameOver || !gameStarted) {
     return;
   }
 
   try {
-    // ZAMAN FARKINI HESAPLA
+    // 1) ZAMAN FARKINI HESAPLA
     const now = performance.now();
     const deltaTime = (now - lastTime) / 1000; // saniye cinsinden
     lastTime = now;
 
-    // DeltaTime çok küçükse standart değer kullan (ilk frame için)
-    window.safeDeltaTime = deltaTime > 0.001 ? deltaTime : 1 / 60; // Global yapıldı
+    // İlk karede çok küçük deltaTime olmasın diye güvenlik
+    window.safeDeltaTime = deltaTime > 0.001 ? deltaTime : 1 / 60;
 
+    // 2) Canvas'ı temizle ve temel çizimleri yap
     ctx.clearRect(0, 0, canvas.width, canvas.height);
     drawBackgroundElements();
     drawPlayer();
-    drawObstacles(window.safeDeltaTime); // parametre eklendi
-    drawPowerups(window.safeDeltaTime); // parametre eklendi
+    drawObstacles(window.safeDeltaTime);
+    drawPowerups(window.safeDeltaTime);
     drawParticles();
     updateParticles();
 
-    // Oyuncu hareketi - deltaTime 60 FPS'e göre normalize edildi
-    const moveSpeed = speed * 1.2 * 60; // 60 FPS baz alınarak çarpıldı
+    // 3) Oyuncu hareketi - deltaTime ile normalize edildi
+    const moveSpeed = speed * 1.2 * 60; // 60 FPS baz alınıyor
     player.x += player.dir * moveSpeed * window.safeDeltaTime;
 
-    // Kenarlarda zıplama
+    // 4) Kenarlarda zıplama mantığı
     if (
       player.x - player.radius <= 0 ||
       player.x + player.radius >= canvas.width
@@ -1092,7 +1179,7 @@ function draw() {
       createParticles(player.x, player.y, "#ffffff");
     }
 
-    // Çarpışma kontrolü
+    // 5) Çarpışma kontrolü
     try {
       if (checkCollision()) {
         gameOver();
@@ -1102,30 +1189,28 @@ function draw() {
       console.log("Collision check error:", error);
     }
 
-    // Skor artışı - deltaTime 60 FPS'e göre normalize edildi
+    // 6) Skor artışı - deltaTime ile normalize edildi
     score += 0.1 * combo * 60 * window.safeDeltaTime;
     updateLevel();
     updateUI();
 
-    // Power-up oluşturma
-    if (Math.random() < 0.005) createPowerup();
+    // 7) Power-up oluşturma — “zaman bazlı” kontrol
+    maybeCreatePowerup(now);
 
-    // Yeni engel oluşturma
-    console.log("Engel kontrol - obstacles.length:", obstacles.length); // DEBUG
+    // 8) Yeni engel oluşturma
     if (
       obstacles.length === 0 ||
       obstacles.at(-1).y > -minVerticalSpacing * 0.8
     ) {
-      console.log("createObstacle çağrılıyor"); // DEBUG
       createObstacle();
     }
 
-    // Eski engelleri temizle
+    // 9) Ekranın dışına çıkan engelleri temizle
     obstacles = obstacles.filter(
       (obs) => obs.y < canvas.height + obstacleHeight
     );
 
-    // Devam et
+    // 10) Döngüyü devam ettir
     animationId = requestAnimationFrame(draw);
   } catch (error) {
     console.log("Draw function error:", error);
@@ -1581,7 +1666,107 @@ function generateDeviceId() {
   }
   return deviceId;
 }
+// ✅ Bu cihazdaki kayıtlı kullanıcıları logda gösterme fonksiyonu
+async function showRegisteredUsersOnThisDevice() {
+  const currentDeviceId = generateDeviceId();
+  
+  console.log("🔍 Bu cihazdaki kayıtlı kullanıcılar aranıyor...");
+  console.log("📱 Mevcut cihaz ID:", currentDeviceId);
+  
+  try {
+    const usersSnapshot = await db.collection("users").get();
+    const registeredUsersOnThisDevice = [];
+    let totalUsersChecked = 0;
+    
+    usersSnapshot.forEach((doc) => {
+      const userData = doc.data();
+      const username = doc.id;
+      totalUsersChecked++;
+      
+      // Yeni sistem (deviceIds array)
+      let deviceIds = userData.deviceIds || [];
+      
+      // Eski sistem uyumluluğu
+      if (userData.deviceId && !deviceIds.includes(userData.deviceId)) {
+        deviceIds.push(userData.deviceId);
+      }
+      
+      // Bu cihazda kayıtlı mı kontrol et
+      if (deviceIds.includes(currentDeviceId)) {
+        registeredUsersOnThisDevice.push({
+          username: username,
+          displayName: userData.displayName || username,
+          totalScore: userData.totalScore || 0,
+          gamesPlayed: userData.gamesPlayed || 0,
+          createdAt: userData.createdAt,
+          lastLoginAt: userData.lastLoginAt,
+          totalDevices: deviceIds.length
+        });
+      }
+    });
+    
+    console.log("📊 CIHAZ KULLANICI RAPORU");
+    console.log("========================");
+    console.log(`📱 Cihaz ID: ${currentDeviceId}`);
+    console.log(`👥 Toplam kontrol edilen kullanıcı: ${totalUsersChecked}`);
+    console.log(`✅ Bu cihazda kayıtlı kullanıcı sayısı: ${registeredUsersOnThisDevice.length}`);
+    console.log("========================");
+    
+    if (registeredUsersOnThisDevice.length === 0) {
+      console.log("❌ Bu cihazda kayıtlı kullanıcı bulunamadı");
+    } else {
+      console.log("👤 BU CİHAZDAKİ KAYITLI KULLANICILAR:");
+      
+      registeredUsersOnThisDevice.forEach((user, index) => {
+        console.log(`\n${index + 1}. 👤 ${user.displayName} (@${user.username})`);
+        console.log(`   📊 Toplam Skor: ${user.totalScore}`);
+        console.log(`   🎮 Oyun Sayısı: ${user.gamesPlayed}`);
+        console.log(`   📱 Kayıtlı Cihaz Sayısı: ${user.totalDevices}`);
+        
+        if (user.createdAt) {
+          const createdDate = user.createdAt.toDate ? user.createdAt.toDate() : new Date(user.createdAt);
+          console.log(`   📅 Kayıt Tarihi: ${createdDate.toLocaleString('tr-TR')}`);
+        }
+        
+        if (user.lastLoginAt) {
+          const lastLoginDate = user.lastLoginAt.toDate ? user.lastLoginAt.toDate() : new Date(user.lastLoginAt);
+          console.log(`   🕐 Son Giriş: ${lastLoginDate.toLocaleString('tr-TR')}`);
+        }
+      });
+    }
+    
+    console.log("========================");
+    
+    // Ayrıca return ile veri döndür (isteğe bağlı)
+    return {
+      deviceId: currentDeviceId,
+      totalUsersChecked,
+      registeredUsersCount: registeredUsersOnThisDevice.length,
+      users: registeredUsersOnThisDevice
+    };
+    
+  } catch (error) {
+    console.error("❌ Kullanıcıları kontrol ederken hata:", error);
+  }
+}
 
+// ✅ Sayfa yüklendiğinde otomatik olarak çalıştırmak için
+window.addEventListener('load', () => {
+  // 2 saniye sonra çalıştır (Firebase bağlantısının kurulması için)
+  setTimeout(() => {
+    showRegisteredUsersOnThisDevice();
+  }, 2000);
+});
+
+// ✅ Manuel olarak çalıştırmak için console'da kullanılabilecek kısayol
+window.showDeviceUsers = showRegisteredUsersOnThisDevice;
+
+// ✅ Mevcut handleAdvancedLogin fonksiyonuna da ekleyebilirsiniz
+// Bu kısmı handleAdvancedLogin fonksiyonunun başına ekleyin:
+/*
+// Giriş yapmadan önce bu cihazdaki kullanıcıları göster
+showRegisteredUsersOnThisDevice();
+*/
 // 🔄 Geliştirilmiş login fonksiyonu
 async function handleAdvancedLogin() {
   if (!navigator.onLine) {
@@ -1615,33 +1800,32 @@ async function handleAdvancedLogin() {
     if (userDoc.exists) {
       const userData = userDoc.data();
       
-      // 🔍 DEBUG: Konsola yazdır
-      console.log("🔍 DEBUG - Mevcut cihaz ID:", deviceId);
-      console.log("🔍 DEBUG - Kayıtlı cihaz ID:", userData.deviceId);
-      console.log("🔍 DEBUG - ID'ler eşit mi?", userData.deviceId === deviceId);
+      // ✅ YENİ SİSTEM: Cihaz ID'leri array olarak saklanıyor
+      let registeredDevices = userData.deviceIds || [];
 
-      // ✅ Cihaz ID'si kontrolü - SIKI KONTROL
-      if (userData.deviceId !== deviceId) {
-        console.log("❌ GÜVENLIK: Yetkisiz erişim engellendi!");
-        console.log("❌ Kullanıcı:", normalizedUsername);
-        console.log("❌ Denenen cihaz:", deviceId);
-        console.log("❌ Kayıtlı cihaz:", userData.deviceId);
+      // Eski sistemden gelenler için uyumluluk
+      if (userData.deviceId && !registeredDevices.includes(userData.deviceId)) {
+        registeredDevices.push(userData.deviceId);
+      }
+      
+      console.log("🔍 Kayıtlı cihazlar:", registeredDevices);
+      console.log("🔍 Mevcut cihaz:", deviceId);
+
+      // ✅ Bu cihaz kayıtlı mı kontrol et
+      if (!registeredDevices.includes(deviceId)) {
+        console.log("❌ Bu kullanıcı başka cihaz(lar)da kayıtlı");
 
         showModernPopup(
-          `⚠️ "${inputUsername}" kullanıcı adı başka bir cihazda kullanılıyor! Lütfen farklı bir isim seçin.`,
+          `⚠️ "${inputUsername}" kullanıcı adı başka bir cihazda kullanılıyor! Bu cihazda kullanmak için farklı bir isim seçin.`,
           "warning"
         );
 
         usernameInput.focus();
         usernameInput.select();
-        
-        // ✅ SIKI RETURN - Hiçbir şey çalışmasın
-        console.log("🛑 Fonksiyon sonlandırılıyor - erişim reddedildi");
         return;
       }
 
-      console.log("✅ GÜVENLIK: Aynı cihazdan giriş - izin verildi");
-      console.log("✅ Kullanıcı:", normalizedUsername);
+      console.log("✅ Bu cihazda kayıtlı kullanıcı - giriş yapılıyor");
 
       // Giriş işlemleri
       currentUser = normalizedUsername;
@@ -1671,7 +1855,7 @@ async function handleAdvancedLogin() {
       gamesPlayed: 0,
       createdAt: firebase.firestore.FieldValue.serverTimestamp(),
       lastLoginAt: firebase.firestore.FieldValue.serverTimestamp(),
-      deviceId: deviceId,
+      deviceIds: [deviceId], // ✅ Array olarak saklanıyor
     };
 
     await userRef.set(newUserData);
@@ -1692,12 +1876,36 @@ async function handleAdvancedLogin() {
     console.error("❌ Firebase bağlantı hatası:", error);
     alert("🚨 İnternet bağlantınızı kontrol edin ve tekrar deneyin.");
     usernameInput.focus();
+  }
+}
+// ✅ Eski kullanıcıları yeni sisteme uyumlu hale getirme fonksiyonu
+async function migrateOldUsersToNewSystem() {
+  try {
+    const usersSnapshot = await db.collection("users").get();
     
-    // ✅ Hata durumunda da oyun başlatılmasın
-    return;
+    usersSnapshot.forEach(async (doc) => {
+      const userData = doc.data();
+      
+      // Eski sistem kullanıyorsa (deviceId var ama deviceIds yok)
+      if (userData.deviceId && !userData.deviceIds) {
+        console.log("🔄 Eski kullanıcı güncelleniyor:", doc.id);
+        
+        await doc.ref.update({
+          deviceIds: [userData.deviceId], // Array'e çevir
+          // deviceId alanını silmek istersen:
+          // deviceId: firebase.firestore.FieldValue.delete()
+        });
+      }
+    });
+    
+    console.log("✅ Tüm eski kullanıcılar yeni sisteme uyumlu hale getirildi");
+  } catch (error) {
+    console.error("❌ Migration hatası:", error);
   }
 }
 
+// Sayfa yüklendiğinde migration'ı çalıştır (bir kez)
+// migrateOldUsersToNewSystem();
 // Cihaz kimliği oluşturma fonksiyonu
 function generateDeviceId() {
   let deviceId = localStorage.getItem("deviceId");
