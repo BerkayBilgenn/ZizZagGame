@@ -67,11 +67,11 @@ async function updateScore(newScore) {
 
   if (userSnap.exists) {
     const existingBest = userSnap.data().bestScore || 0;
-if (newScore > existingBest) {
-  await userRef.update({ bestScore: newScore });
-}
+    if (newScore > existingBest) {
+      await userRef.update({ bestScore: newScore });
     }
   }
+}
 
 const canvas = document.getElementById("canvas");
 const ctx = canvas.getContext("2d");
@@ -288,7 +288,6 @@ function resetGameVariables() {
   };
   speed = 1.5; // Mobil için yavaş başlangıç
   score = 0;
-  level = 1;
   combo = 1;
   perfectHits = 0;
   streak = 0;
@@ -363,7 +362,7 @@ function restartGame() {
 
   // Oyun değişkenlerini sıfırla
   resetGameVariables();
-  
+
   // Power-up timer'ını sıfırla - ÖNEMLİ!
   lastPowerupTime = 0;
 
@@ -430,42 +429,164 @@ if (returnToMenuBtn) {
     returnToMenu();
   });
 }
+//HUD EKRANININ ALTINDA MÜKEMMEL VB VB YAZILARI
 
-function showNotification(text, type = "error") {
+const notificationQueue = [];
+let isNotificationShowing = false;
+let currentNotificationTimeout = null;
+let currentHideTimeout = null;
+let gameActive = true;
+
+function showNotification(text, type = "success") {
+  if (!gameActive) return;
+
+  notificationQueue.push({ text, type });
+  processNotificationQueue();
+}
+
+function setGameActive(active) {
+  gameActive = active;
+  if (!active) {
+    clearNotificationQueue();
+  }
+}
+
+function clearNotificationQueue() {
+  notificationQueue.length = 0;
+
+  if (currentNotificationTimeout) {
+    clearTimeout(currentNotificationTimeout);
+    currentNotificationTimeout = null;
+  }
+
+  if (currentHideTimeout) {
+    clearTimeout(currentHideTimeout);
+    currentHideTimeout = null;
+  }
+
+  isNotificationShowing = false;
+
   const notification = document.getElementById("notification");
+  if (notification) {
+    // Anında gizle - transition'ı da sıfırla
+    notification.style.transition = "none";
+    notification.style.opacity = "0";
+    notification.style.display = "none";
+    notification.style.visibility = "hidden"; // Ekstra güvenlik
+  }
+}
+
+function processNotificationQueue() {
+  if (!gameActive || isNotificationShowing || notificationQueue.length === 0) return;
+
+  const { text, type } = notificationQueue.shift();
+  const hud = document.getElementById("hud");
+  const notification = document.getElementById("notification");
+
   if (!notification) {
     console.warn("❌ #notification elementi bulunamadı");
     return;
   }
 
-  notification.textContent = text;
-  notification.style.display = "block";
+  isNotificationShowing = true;
 
-  // Mesaj türüne göre renk
-  switch (type) {
-    case "success":
-      notification.style.backgroundColor = "#4CAF50"; // Yeşil
-      break;
-    case "warning":
-      notification.style.backgroundColor = "#FF9800"; // Turuncu
-      break;
-    case "error":
-    default:
-      notification.style.backgroundColor = "#f44336"; // Kırmızı
-      break;
+  // İlk önce tamamen gizle ve hazırla
+  notification.style.transition = "none";
+  notification.style.opacity = "0";
+  notification.style.display = "none";
+  notification.style.visibility = "hidden";
+
+  // Stil ayarları - Transform'u da sıfırla
+  notification.textContent = text;
+  notification.style.position = "fixed";
+  notification.style.left = "50%";
+  notification.style.transform = "translateX(-50%) translateY(0px)"; // Y ekseni de sabitli
+  notification.style.zIndex = "9999";
+  notification.style.padding = "10px 20px";
+  notification.style.borderRadius = "16px";
+  notification.style.fontSize = "1rem";
+  notification.style.fontWeight = "600";
+  notification.style.textAlign = "center";
+  notification.style.backdropFilter = "blur(12px)";
+  notification.style.background = "rgba(255, 255, 255, 0.08)";
+  notification.style.border = "1px solid rgba(255,255,255,0.2)";
+  notification.style.color = "#FFD700";
+  notification.style.boxShadow = "0 4px 16px rgba(255,255,255,0.1)";
+  notification.style.willChange = "opacity"; // GPU acceleration hint
+
+  // ÖNCE konum hesapla - DOM manipülasyonundan ÖNCE
+  let finalTop;
+  if (hud) {
+    const hudRect = hud.getBoundingClientRect();
+    finalTop = hudRect.bottom + 10;
+    if (finalTop + 50 > window.innerHeight) {
+      finalTop = window.innerHeight - 60;
+    }
+  } else {
+    finalTop = 140;
   }
 
-  notification.style.color = "white";
+  // İlk önce tamamen gizle ve hazırla
+  notification.style.transition = "none";
+  notification.style.opacity = "0";
+  notification.style.display = "block"; // Hemen block yap
+  notification.style.visibility = "visible";
 
-  // Fade animasyonu
-  notification.classList.remove("fade-in");
-  void notification.offsetWidth;
-  notification.classList.add("fade-in");
+  // Stil ayarları - Pozisyonu HEMEN ayarla
+  notification.textContent = text;
+  notification.style.position = "fixed";
+  notification.style.left = "50%";
+  notification.style.top = `${finalTop}px`; // Final pozisyonda başla
+  notification.style.transform = "translateX(-50%)"; // Sadece X ekseni
+  notification.style.zIndex = "9999";
+  notification.style.padding = "10px 20px";
+  notification.style.borderRadius = "16px";
+  notification.style.fontSize = "1rem";
+  notification.style.fontWeight = "600";
+  notification.style.textAlign = "center";
+  notification.style.backdropFilter = "blur(12px)";
+  notification.style.background = "rgba(255, 255, 255, 0.08)";
+  notification.style.border = "1px solid rgba(255,255,255,0.2)";
+  notification.style.color = "#FFD700";
+  notification.style.boxShadow = "0 4px 16px rgba(255,255,255,0.1)";
+  notification.style.willChange = "opacity"; // Sadece opacity değişecek
 
-  setTimeout(() => {
-    notification.style.display = "none";
-  }, 3000);
+  // Sadece opacity animasyonu - DİKEY HAREKET YOK
+  requestAnimationFrame(() => {
+    if (!gameActive) return;
+
+    notification.style.transition = "opacity 0.3s ease";
+    notification.style.opacity = "1";
+  });
+
+  // Gizleme işlemi
+  currentNotificationTimeout = setTimeout(() => {
+    if (!gameActive) return;
+
+    // Gizleme animasyonu
+    notification.style.opacity = "0";
+
+    currentHideTimeout = setTimeout(() => {
+      if (!gameActive) return;
+
+      // Tamamen gizle
+      notification.style.display = "none";
+      notification.style.visibility = "hidden";
+      notification.style.transition = "none"; // Transition'ı sıfırla
+
+      isNotificationShowing = false;
+      currentNotificationTimeout = null;
+      currentHideTimeout = null;
+
+      // Sıradakini işle
+      processNotificationQueue();
+    }, 300);
+  }, 1200);
 }
+
+//HUD EKRANINA GELEN BİLDİRİMLERİN KODUN SONUNA GELDİİKKK
+
+
 
 function createParticles(x, y, color) {
   for (let i = 0; i < 8; i++) {
@@ -526,15 +647,15 @@ const MAX_ACTIVE_POWERUPS = 50; // Fonksiyon dışında tanımla
 function drawPowerups(deltaTime) {
   for (let p of powerups) {
     if (p.collected) continue; // Toplananları atla
-    
+
     p.y += speed * deltaTime * 60; // FPS normalizasyonu için çarpıldı
-    
+
     // Ekran dışına çıktıysa işaretle
     if (p.y > canvas.height + 50) {
       p.collected = true;
       continue;
     }
-    
+
     ctx.save();
     ctx.font = "20px Arial";
     ctx.textAlign = "center";
@@ -551,7 +672,12 @@ function drawPowerups(deltaTime) {
         score += bonus;
         showNotification(`💎 +${Math.floor(bonus)} bonus!`);
       } else {
-        speed = Math.max(1.2, speed - 0.3); // Minimum hız artırıldı
+        const originalSpeed = speed;
+        speed = Math.max(1.2, speed - 0.7); // Daha net etki
+
+        setTimeout(() => {
+          speed = originalSpeed; // 2.5 saniye sonra normale dön
+        }, 2500);
         showNotification("⏰ Yavaşlatma!");
       }
     }
@@ -568,7 +694,7 @@ async function gameOver() {
     showNotification("📴 İnternet bağlantısı yok. Lütfen bağlanın!", "warning");
     return;
   }
-  
+
   const gameScore = Math.floor(score);
   console.log("🛑 gameOver başladı | Skor:", gameScore);
 
@@ -781,9 +907,8 @@ async function showFirebaseScoreList() {
           <div class="score-item ${rankClass}">             
             <span class="rank-badge">${rankDisplay}</span>             
             <span class="username">${userData.username}</span>             
-            <span class="total-score">${
-              userData.totalScore || 0
-            }</span>           
+            <span class="total-score">${userData.totalScore || 0
+          }</span>           
           </div>         
         `;
 
@@ -807,11 +932,11 @@ async function showFirebaseScoreList() {
     }
   }
   const scoreListEl = document.getElementById("scoreList");
-if (scoreListEl) {
-  scoreListEl.style.display = "flex"; // modal görünür olsun
-  scoreListEl.classList.add("score-modal"); // tasarım uygulanması için
-  scoreListEl.style.zIndex = "9999"; // ekranın önünde olsun
-}
+  if (scoreListEl) {
+    scoreListEl.style.display = "flex"; // modal görünür olsun
+    scoreListEl.classList.add("score-modal"); // tasarım uygulanması için
+    scoreListEl.style.zIndex = "9999"; // ekranın önünde olsun
+  }
 
 }
 
@@ -977,7 +1102,7 @@ function drawObstacles(deltaTime) {
       canvas.width - (obs.gapX + gapSize),
       obstacleHeight
     );
-    
+
     obs.y += speed * deltaTime * 60;
 
     // AABB Çarpışma Kontrolü
@@ -1000,14 +1125,14 @@ function drawObstacles(deltaTime) {
     const rightObstacleBottom = obs.y + obstacleHeight;
 
     // Sol engel ile çarpışma kontrolü
-    const hitLeftObstacle = 
+    const hitLeftObstacle =
       playerRight > leftObstacleLeft &&
       playerLeft < leftObstacleRight &&
       playerBottom > leftObstacleTop &&
       playerTop < leftObstacleBottom;
 
     // Sağ engel ile çarpışma kontrolü
-    const hitRightObstacle = 
+    const hitRightObstacle =
       playerRight > rightObstacleLeft &&
       playerLeft < rightObstacleRight &&
       playerBottom > rightObstacleTop &&
@@ -1068,22 +1193,11 @@ function checkAchievements() {
   if (perfectHits === 15) addAchievement("💫 15 mükemmel!");
   if (score > 500) addAchievement("🎊 500 puan!");
   if (score > 1000) addAchievement("🏆 1000 puan!");
-  if (level === 5) addAchievement("📈 Seviye 5!");
-  if (level === 10) addAchievement("🚀 Seviye 10!");
   if (combo >= 5) addAchievement("⚡ 5x Kombo!");
   if (combo >= 8) addAchievement("💥 8x Kombo!");
 }
 
-function updateLevel() {
-  const newLevel = Math.floor(score / 200) + 1;
-  const deltaLevels = newLevel - level;
-  if (deltaLevels > 0) {
-    level = newLevel;
-    speed += deltaLevels * (9 * (1/60));
-    showNotification(`🆙 Seviye ${level}!`);
-    createParticles(player.x, player.y, "#00FF00");
-  }
-}
+
 
 function checkCollision() {
   // Daha hassas çarpışma kontrolü - sadece yakın engelleri kontrol et
@@ -1103,10 +1217,10 @@ function checkCollision() {
 
     // Oyuncu engelle çakışıyor mu?
     if (playerBottom > obsTop && playerTop < obsBottom) {
-      // Sol engelle çarpışma - daha toleranslı
-      if (playerRight < gapLeft + 5) return true;
-      // Sağ engelle çarpışma - daha toleranslı
-      if (playerLeft > gapRight - 5) return true;
+      // Oyuncunun merkezi boşluğun içinde değilse çarpışma say
+      const insideGap = player.x > gapLeft && player.x < gapRight;
+      if (!insideGap) return true;
+
     }
   }
   return false;
@@ -1120,10 +1234,7 @@ function updateUI() {
     prevScoreText = newScoreText;
   }
 
-  const newLevelText = "📊 Seviye: " + level;
-  if (newLevelText !== levelDisplay.textContent) {
-    levelDisplay.textContent = newLevelText;
-  }
+
 
   // ✅ Streak güncelle
   if (streakDisplay && streakDisplay.textContent !== `🔥 Seri: ${streak}`) {
@@ -1191,7 +1302,7 @@ function draw(timestamp) {
 
     // 6) Skor artışı - deltaTime ile normalize edildi
     score += 0.1 * combo * 60 * window.safeDeltaTime;
-    updateLevel();
+
     updateUI();
 
     // 7) Power-up oluşturma — “zaman bazlı” kontrol
@@ -1222,9 +1333,8 @@ function draw(timestamp) {
 function shareScore() {
   const text = `🎯 IGÜ ZigZag Rota'da ${Math.floor(
     score
-  )} puan aldım! 🔥 Seri: ${streak}, 📊 Seviye: ${level} ${
-    currentUser ? `- ${currentUser}` : ""
-  }`;
+  )} puan aldım! 🔥 Seri: ${streak}, 📊 Seviye: ${level} ${currentUser ? `- ${currentUser}` : ""
+    }`;
   const instagramUsername = "ogrenci.dekanligi";
   const instagramUrl = "https://www.instagram.com/ogrenci.dekanligi/";
 
@@ -1377,40 +1487,40 @@ async function updateAchievementsList() {
       .orderBy("totalScore", "desc")
       .limit(10)
       .get();
-    
+
     const achievementsScroll = document.getElementById("achievementsScroll");
     achievementsScroll.innerHTML = "";
-    
+
     if (snapshot.empty) {
       achievementsScroll.innerHTML = '<div class="no-achievements">Henüz başarı yok</div>';
       return;
     }
-    
+
     // 🔍 DEBUG: Verileri kontrol edelim
     console.log("=== LİDERLİK TABLOSU DEBUG ===");
-    
+
     let rank = 1;
     snapshot.forEach((doc) => {
       const data = doc.data();
-      
+
       // 🔍 Her kullanıcının verisini kontrol et
       console.log(`${rank}. ${data.username}`);
       console.log(`   Puan: ${data.totalScore}`);
       console.log(`   Puan Tipi: ${typeof data.totalScore}`);
       console.log(`   Raw Data:`, data);
       console.log("---");
-      
+
       // Puanı number'a çevirmeyi dene
       const score = Number(data.totalScore);
       console.log(`   Number'a çevrildi: ${score}`);
-      
+
       const achievementDiv = createAchievementElement(rank, data.username, score);
       achievementsScroll.appendChild(achievementDiv);
       rank++;
     });
-    
+
     console.log("=== DEBUG BİTTİ ===");
-    
+
   } catch (error) {
     console.error("Başarılar yüklenirken hata:", error);
     const achievementsScroll = document.getElementById("achievementsScroll");
@@ -1637,7 +1747,7 @@ function submitScore() {
     showNotification("📴 İnternet bağlantısı yok. Lütfen bağlanın!", "warning");
     return;
   }
-  
+
   const username = document.getElementById("username").value.trim();
   const score = parseInt(document.getElementById("finalScore").innerText || 0);
 
@@ -1669,28 +1779,28 @@ function generateDeviceId() {
 // ✅ Bu cihazdaki kayıtlı kullanıcıları logda gösterme fonksiyonu
 async function showRegisteredUsersOnThisDevice() {
   const currentDeviceId = generateDeviceId();
-  
+
   console.log("🔍 Bu cihazdaki kayıtlı kullanıcılar aranıyor...");
   console.log("📱 Mevcut cihaz ID:", currentDeviceId);
-  
+
   try {
     const usersSnapshot = await db.collection("users").get();
     const registeredUsersOnThisDevice = [];
     let totalUsersChecked = 0;
-    
+
     usersSnapshot.forEach((doc) => {
       const userData = doc.data();
       const username = doc.id;
       totalUsersChecked++;
-      
+
       // Yeni sistem (deviceIds array)
       let deviceIds = userData.deviceIds || [];
-      
+
       // Eski sistem uyumluluğu
       if (userData.deviceId && !deviceIds.includes(userData.deviceId)) {
         deviceIds.push(userData.deviceId);
       }
-      
+
       // Bu cihazda kayıtlı mı kontrol et
       if (deviceIds.includes(currentDeviceId)) {
         registeredUsersOnThisDevice.push({
@@ -1704,39 +1814,39 @@ async function showRegisteredUsersOnThisDevice() {
         });
       }
     });
-    
+
     console.log("📊 CIHAZ KULLANICI RAPORU");
     console.log("========================");
     console.log(`📱 Cihaz ID: ${currentDeviceId}`);
     console.log(`👥 Toplam kontrol edilen kullanıcı: ${totalUsersChecked}`);
     console.log(`✅ Bu cihazda kayıtlı kullanıcı sayısı: ${registeredUsersOnThisDevice.length}`);
     console.log("========================");
-    
+
     if (registeredUsersOnThisDevice.length === 0) {
       console.log("❌ Bu cihazda kayıtlı kullanıcı bulunamadı");
     } else {
       console.log("👤 BU CİHAZDAKİ KAYITLI KULLANICILAR:");
-      
+
       registeredUsersOnThisDevice.forEach((user, index) => {
         console.log(`\n${index + 1}. 👤 ${user.displayName} (@${user.username})`);
         console.log(`   📊 Toplam Skor: ${user.totalScore}`);
         console.log(`   🎮 Oyun Sayısı: ${user.gamesPlayed}`);
         console.log(`   📱 Kayıtlı Cihaz Sayısı: ${user.totalDevices}`);
-        
+
         if (user.createdAt) {
           const createdDate = user.createdAt.toDate ? user.createdAt.toDate() : new Date(user.createdAt);
           console.log(`   📅 Kayıt Tarihi: ${createdDate.toLocaleString('tr-TR')}`);
         }
-        
+
         if (user.lastLoginAt) {
           const lastLoginDate = user.lastLoginAt.toDate ? user.lastLoginAt.toDate() : new Date(user.lastLoginAt);
           console.log(`   🕐 Son Giriş: ${lastLoginDate.toLocaleString('tr-TR')}`);
         }
       });
     }
-    
+
     console.log("========================");
-    
+
     // Ayrıca return ile veri döndür (isteğe bağlı)
     return {
       deviceId: currentDeviceId,
@@ -1744,7 +1854,7 @@ async function showRegisteredUsersOnThisDevice() {
       registeredUsersCount: registeredUsersOnThisDevice.length,
       users: registeredUsersOnThisDevice
     };
-    
+
   } catch (error) {
     console.error("❌ Kullanıcıları kontrol ederken hata:", error);
   }
@@ -1773,7 +1883,7 @@ async function handleAdvancedLogin() {
     showNotification("📴 İnternet bağlantısı yok. Lütfen bağlanın!", "warning");
     return;
   }
-  
+
   const usernameInput = document.getElementById("usernameInput");
   const inputUsername = usernameInput.value.trim();
   const normalizedUsername = inputUsername.toLowerCase();
@@ -1785,7 +1895,7 @@ async function handleAdvancedLogin() {
     usernameInput.focus();
     return;
   }
-  
+
   if (inputUsername.length < 3) {
     alert("Kullanıcı adı en az 3 karakter olmalıdır.");
     usernameInput.focus();
@@ -1799,7 +1909,7 @@ async function handleAdvancedLogin() {
 
     if (userDoc.exists) {
       const userData = userDoc.data();
-      
+
       // ✅ YENİ SİSTEM: Cihaz ID'leri array olarak saklanıyor
       let registeredDevices = userData.deviceIds || [];
 
@@ -1807,7 +1917,7 @@ async function handleAdvancedLogin() {
       if (userData.deviceId && !registeredDevices.includes(userData.deviceId)) {
         registeredDevices.push(userData.deviceId);
       }
-      
+
       console.log("🔍 Kayıtlı cihazlar:", registeredDevices);
       console.log("🔍 Mevcut cihaz:", deviceId);
 
@@ -1871,7 +1981,7 @@ async function handleAdvancedLogin() {
 
     showFirstTimeWelcome(inputUsername);
     showStartScreen();
-    
+
   } catch (error) {
     console.error("❌ Firebase bağlantı hatası:", error);
     alert("🚨 İnternet bağlantınızı kontrol edin ve tekrar deneyin.");
@@ -1882,14 +1992,14 @@ async function handleAdvancedLogin() {
 async function migrateOldUsersToNewSystem() {
   try {
     const usersSnapshot = await db.collection("users").get();
-    
+
     usersSnapshot.forEach(async (doc) => {
       const userData = doc.data();
-      
+
       // Eski sistem kullanıyorsa (deviceId var ama deviceIds yok)
       if (userData.deviceId && !userData.deviceIds) {
         console.log("🔄 Eski kullanıcı güncelleniyor:", doc.id);
-        
+
         await doc.ref.update({
           deviceIds: [userData.deviceId], // Array'e çevir
           // deviceId alanını silmek istersen:
@@ -1897,7 +2007,7 @@ async function migrateOldUsersToNewSystem() {
         });
       }
     });
-    
+
     console.log("✅ Tüm eski kullanıcılar yeni sisteme uyumlu hale getirildi");
   } catch (error) {
     console.error("❌ Migration hatası:", error);
@@ -1999,8 +2109,7 @@ function showModernPopup(message, type = "error") {
   `;
 
   popup.innerHTML = `
-    <div style="font-size: 40px; margin-bottom: 15px;">${
-      iconMap[type] || "❌"
+    <div style="font-size: 40px; margin-bottom: 15px;">${iconMap[type] || "❌"
     }</div>
     <div style="font-size: 16px; color: #333; margin-bottom: 20px; line-height: 1.4;">${message}</div>
     <button onclick="this.closest('[data-popup]').remove()" 
@@ -2037,42 +2146,8 @@ function showModernPopup(message, type = "error") {
   };
   document.addEventListener("keydown", closeOnEsc);
 }
-// Güncellenmiş showNotification fonksiyonu
-function showNotification(text, type = "error") {
-  const notification = document.getElementById("notification");
-  if (!notification) {
-    console.warn("❌ #notification elementi bulunamadı");
-    return;
-  }
 
-  notification.textContent = text;
-  notification.style.display = "block";
 
-  // Mesaj türüne göre renk ayarlama
-  switch (type) {
-    case "success":
-      notification.style.backgroundColor = "#4CAF50"; // Yeşil
-      break;
-    case "warning":
-      notification.style.backgroundColor = "#FF9800"; // Turuncu
-      break;
-    case "error":
-    default:
-      notification.style.backgroundColor = "#f44336"; // Kırmızı
-      break;
-  }
-
-  notification.style.color = "white";
-
-  // Fade animasyonu
-  notification.classList.remove("fade-in");
-  void notification.offsetWidth; // Reflow zorlamak için
-  notification.classList.add("fade-in");
-
-  setTimeout(() => {
-    notification.style.display = "none";
-  }, 3000);
-}
 
 function changeUser() {
   // Mevcut oyunu durdur
@@ -2149,25 +2224,25 @@ document.addEventListener("DOMContentLoaded", async function () {
   }
 
   // ✅ Login butonu
-// Giriş butonuna tıklandığında bu fonksiyon çalışır
-const loginBtn = document.getElementById("loginBtn");
-if (loginBtn) {
-  loginBtn.addEventListener("click", function (e) {
-    e.preventDefault();
-    handleAdvancedLogin(); // Gelişmiş giriş (cihaz kontrolüyle)
-  });
-}
-
-// Enter tuşuna basınca da giriş yapılabilir
-const usernameInput = document.getElementById("usernameInput");
-if (usernameInput) {
-  usernameInput.addEventListener("keypress", function (e) {
-    if (e.key === "Enter") {
+  // Giriş butonuna tıklandığında bu fonksiyon çalışır
+  const loginBtn = document.getElementById("loginBtn");
+  if (loginBtn) {
+    loginBtn.addEventListener("click", function (e) {
       e.preventDefault();
-      handleAdvancedLogin();
-    }
-  });
-}
+      handleAdvancedLogin(); // Gelişmiş giriş (cihaz kontrolüyle)
+    });
+  }
+
+  // Enter tuşuna basınca da giriş yapılabilir
+  const usernameInput = document.getElementById("usernameInput");
+  if (usernameInput) {
+    usernameInput.addEventListener("keypress", function (e) {
+      if (e.key === "Enter") {
+        e.preventDefault();
+        handleAdvancedLogin();
+      }
+    });
+  }
 
   // ✅ Skoru gönder (submitScoreBtn varsa)
   const submitScoreBtn = document.getElementById("submitScoreBtn");
@@ -2245,7 +2320,7 @@ function showStartScreen() {
   document.getElementById("loginScreen").style.display = "none";
   document.getElementById("startScreen").style.display = "block";
 
-  
+
 }
 
 function hideScoreList() {
@@ -2378,24 +2453,21 @@ async function showFirebaseScoreList() {
 
         // Modern HTML içeriği
         li.innerHTML = `
-  <div class="score-card ${rankClass} ${
-          userData.username === currentUser ? "current-player" : ""
-        }">
+  <div class="score-card ${rankClass} ${userData.username === currentUser ? "current-player" : ""
+          }">
     <div class="rank-section">
       <div class="rank-number">${rankDisplay}${rankIcon}</div>
     </div>
     <div class="player-info">
       <div class="player-name">${userData.username}</div>
-      <div class="player-score">Toplam: <strong>${
-        userData.totalScore || 0
-      }</strong></div>
+      <div class="player-score">Toplam: <strong>${userData.totalScore || 0
+          }</strong></div>
     </div>
     <div class="score-trend">
-      ${
-        rank <= 3
-          ? '<span class="trend-icon trending-up"></span>'
-          : '<span class="trend-icon stable"></span>'
-      }
+      ${rank <= 3
+            ? '<span class="trend-icon trending-up"></span>'
+            : '<span class="trend-icon stable"></span>'
+          }
     </div>
   </div>
 `;
