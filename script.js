@@ -1644,7 +1644,7 @@ async function handleAdvancedLogin() {
   const inputUsername = usernameInput.value.trim();
   const normalizedUsername = inputUsername.toLowerCase();
 
-  const deviceId = generateDeviceId(); // ✅ Cihaz ID'si alınır
+  const deviceId = generateDeviceId();
 
   if (!inputUsername) {
     alert("Lütfen kullanıcı adınızı girin.");
@@ -1660,16 +1660,23 @@ async function handleAdvancedLogin() {
   }
 
   try {
-    // ✅ DÜZELTME: normalizedUsername kullanılıyor
     const userRef = db.collection("users").doc(normalizedUsername);
     const userDoc = await userRef.get();
 
     if (userDoc.exists) {
       const userData = userDoc.data();
+      
+      // 🔍 DEBUG: Konsola yazdır
+      console.log("🔍 DEBUG - Mevcut cihaz ID:", deviceId);
+      console.log("🔍 DEBUG - Kayıtlı cihaz ID:", userData.deviceId);
+      console.log("🔍 DEBUG - ID'ler eşit mi?", userData.deviceId === deviceId);
 
-      // ✅ Cihaz ID'si kontrolü - Kullanıcı adı zaten var
+      // ✅ Cihaz ID'si kontrolü - SIKI KONTROL
       if (userData.deviceId !== deviceId) {
-        console.log("❌ Bu kullanıcı adı başka bir cihazda kullanılıyor");
+        console.log("❌ GÜVENLIK: Yetkisiz erişim engellendi!");
+        console.log("❌ Kullanıcı:", normalizedUsername);
+        console.log("❌ Denenen cihaz:", deviceId);
+        console.log("❌ Kayıtlı cihaz:", userData.deviceId);
 
         showModernPopup(
           `⚠️ "${inputUsername}" kullanıcı adı başka bir cihazda kullanılıyor! Lütfen farklı bir isim seçin.`,
@@ -1678,12 +1685,16 @@ async function handleAdvancedLogin() {
 
         usernameInput.focus();
         usernameInput.select();
+        
+        // ✅ SIKI RETURN - Hiçbir şey çalışmasın
+        console.log("🛑 Fonksiyon sonlandırılıyor - erişim reddedildi");
         return;
       }
 
-      console.log("✅ Aynı cihazdan giriş yapılıyor - izin verildi");
+      console.log("✅ GÜVENLIK: Aynı cihazdan giriş - izin verildi");
+      console.log("✅ Kullanıcı:", normalizedUsername);
 
-      // ✅ DÜZELTME: normalizedUsername kullanılıyor
+      // Giriş işlemleri
       currentUser = normalizedUsername;
       currentUserTotalScore = userData.totalScore || 0;
 
@@ -1700,23 +1711,22 @@ async function handleAdvancedLogin() {
       return;
     }
 
-    // ✅ Yeni kullanıcı kaydı - Kullanıcı adı mevcut değil
-    console.log("✨ Yeni kullanıcı oluşturuluyor");
+    // ✅ Yeni kullanıcı kaydı
+    console.log("✨ Yeni kullanıcı oluşturuluyor:", normalizedUsername);
 
     const newUserData = {
-      username: normalizedUsername, // ✅ DÜZELTME: normalizedUsername kullanılıyor
-      displayName: inputUsername,   // ✅ Orijinal hali de saklanıyor
+      username: normalizedUsername,
+      displayName: inputUsername,
       totalScore: 0,
       bestScore: 0,
       gamesPlayed: 0,
       createdAt: firebase.firestore.FieldValue.serverTimestamp(),
       lastLoginAt: firebase.firestore.FieldValue.serverTimestamp(),
-      deviceId: deviceId, // ✅ Firebase'e cihaz ID kaydedilir
+      deviceId: deviceId,
     };
 
     await userRef.set(newUserData);
 
-    // ✅ DÜZELTME: normalizedUsername kullanılıyor
     currentUser = normalizedUsername;
     currentUserTotalScore = 0;
 
@@ -1726,12 +1736,16 @@ async function handleAdvancedLogin() {
 
     console.log("✅ Yeni kullanıcı başarıyla oluşturuldu:", normalizedUsername);
 
-    showFirstTimeWelcome(inputUsername); // Gösterimde orijinal hali kullanılıyor
+    showFirstTimeWelcome(inputUsername);
     showStartScreen();
+    
   } catch (error) {
     console.error("❌ Firebase bağlantı hatası:", error);
     alert("🚨 İnternet bağlantınızı kontrol edin ve tekrar deneyin.");
     usernameInput.focus();
+    
+    // ✅ Hata durumunda da oyun başlatılmasın
+    return;
   }
 }
 
