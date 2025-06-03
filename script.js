@@ -1642,17 +1642,17 @@ async function handleAdvancedLogin() {
   
   const usernameInput = document.getElementById("usernameInput");
   const inputUsername = usernameInput.value.trim();
-const normalizedUsername = inputUsername.toLowerCase();
+  const normalizedUsername = inputUsername.toLowerCase();
 
   const deviceId = generateDeviceId(); // ✅ Cihaz ID'si alınır
 
-  if (!username) {
+  if (!inputUsername) {
     alert("Lütfen kullanıcı adınızı girin.");
     usernameInput.focus();
     return;
   }
-
-  if (username.length < 3) {
+  
+  if (inputUsername.length < 3) {
     alert("Kullanıcı adı en az 3 karakter olmalıdır.");
     usernameInput.focus();
     usernameInput.select();
@@ -1660,18 +1660,19 @@ const normalizedUsername = inputUsername.toLowerCase();
   }
 
   try {
-    const userRef = db.collection("users").doc(username);
+    // ✅ DÜZELTME: normalizedUsername kullanılıyor
+    const userRef = db.collection("users").doc(normalizedUsername);
     const userDoc = await userRef.get();
 
     if (userDoc.exists) {
       const userData = userDoc.data();
 
-      // ✅ Cihaz ID'si kontrolü
+      // ✅ Cihaz ID'si kontrolü - Kullanıcı adı zaten var
       if (userData.deviceId !== deviceId) {
-        console.log("❌ Başka cihazda kullanılmış - izin verilmiyor");
+        console.log("❌ Bu kullanıcı adı başka bir cihazda kullanılıyor");
 
         showModernPopup(
-          "⚠️ Bu kullanıcı adı başka bir cihazda kullanılıyor!",
+          `⚠️ "${inputUsername}" kullanıcı adı başka bir cihazda kullanılıyor! Lütfen farklı bir isim seçin.`,
           "warning"
         );
 
@@ -1682,11 +1683,11 @@ const normalizedUsername = inputUsername.toLowerCase();
 
       console.log("✅ Aynı cihazdan giriş yapılıyor - izin verildi");
 
-      // Giriş işlemleri
-      currentUser = username;
+      // ✅ DÜZELTME: normalizedUsername kullanılıyor
+      currentUser = normalizedUsername;
       currentUserTotalScore = userData.totalScore || 0;
 
-      localStorage.setItem("currentUser", username);
+      localStorage.setItem("currentUser", normalizedUsername);
       localStorage.setItem("userLoginCount", "1");
       localStorage.setItem("lastLoginTime", new Date().toISOString());
 
@@ -1694,16 +1695,17 @@ const normalizedUsername = inputUsername.toLowerCase();
         lastLoginAt: firebase.firestore.FieldValue.serverTimestamp(),
       });
 
-      showWelcomeBackMessage(username, 1);
+      showWelcomeBackMessage(normalizedUsername, 1);
       showStartScreen();
       return;
     }
 
-    // ✅ Yeni kullanıcı kaydı
+    // ✅ Yeni kullanıcı kaydı - Kullanıcı adı mevcut değil
     console.log("✨ Yeni kullanıcı oluşturuluyor");
 
     const newUserData = {
-      username: username,
+      username: normalizedUsername, // ✅ DÜZELTME: normalizedUsername kullanılıyor
+      displayName: inputUsername,   // ✅ Orijinal hali de saklanıyor
       totalScore: 0,
       bestScore: 0,
       gamesPlayed: 0,
@@ -1714,16 +1716,17 @@ const normalizedUsername = inputUsername.toLowerCase();
 
     await userRef.set(newUserData);
 
-    currentUser = username;
+    // ✅ DÜZELTME: normalizedUsername kullanılıyor
+    currentUser = normalizedUsername;
     currentUserTotalScore = 0;
 
-    localStorage.setItem("currentUser", username);
+    localStorage.setItem("currentUser", normalizedUsername);
     localStorage.setItem("userLoginCount", "1");
     localStorage.setItem("lastLoginTime", new Date().toISOString());
 
-    console.log("✅ Yeni kullanıcı başarıyla oluşturuldu:", username);
+    console.log("✅ Yeni kullanıcı başarıyla oluşturuldu:", normalizedUsername);
 
-    showFirstTimeWelcome(username);
+    showFirstTimeWelcome(inputUsername); // Gösterimde orijinal hali kullanılıyor
     showStartScreen();
   } catch (error) {
     console.error("❌ Firebase bağlantı hatası:", error);
@@ -1975,24 +1978,25 @@ document.addEventListener("DOMContentLoaded", async function () {
   }
 
   // ✅ Login butonu
-  const loginBtn = document.getElementById("loginBtn");
-  if (loginBtn) {
-    loginBtn.addEventListener("click", function (e) {
+// Giriş butonuna tıklandığında bu fonksiyon çalışır
+const loginBtn = document.getElementById("loginBtn");
+if (loginBtn) {
+  loginBtn.addEventListener("click", function (e) {
+    e.preventDefault();
+    handleAdvancedLogin(); // Gelişmiş giriş (cihaz kontrolüyle)
+  });
+}
+
+// Enter tuşuna basınca da giriş yapılabilir
+const usernameInput = document.getElementById("usernameInput");
+if (usernameInput) {
+  usernameInput.addEventListener("keypress", function (e) {
+    if (e.key === "Enter") {
       e.preventDefault();
       handleAdvancedLogin();
-    });
-  }
-
-  // ✅ Enter ile login
-  const usernameInput = document.getElementById("usernameInput");
-  if (usernameInput) {
-    usernameInput.addEventListener("keypress", function (e) {
-      if (e.key === "Enter") {
-        e.preventDefault();
-        handleAdvancedLogin();
-      }
-    });
-  }
+    }
+  });
+}
 
   // ✅ Skoru gönder (submitScoreBtn varsa)
   const submitScoreBtn = document.getElementById("submitScoreBtn");
