@@ -1,23 +1,23 @@
 // Giriş butonu
 document.getElementById("loginBtn").addEventListener("click", async () => {
-  const username = document
-    .getElementById("usernameInput")
-    .value.trim()
-    .toLowerCase(); // Küçük harfe çevir
+const inputUsername = document.getElementById("usernameInput").value.trim(); // Orijinal hali
+const normalizedUsername = inputUsername.toLowerCase(); // Sorgu için
+
   const errorBox = document.getElementById("loginError");
 
-  if (!username) {
+  if (!inputUsername) {
     errorBox.textContent = "Lütfen kullanıcı adınızı girin.";
     return;
   }
+  
 
   try {
-    const userDoc = await db.collection("users").doc(username).get();
+    const userDoc = await db.collection("users").doc(normalizedUsername).get();
 
     if (userDoc.exists) {
       // Mevcut kullanıcı - bilgilerini al
       const userData = userDoc.data();
-      currentUser = username;
+      currentUser = userDoc.data().username || inputUsername; // Orijinal haliyle
       currentUserTotalScore = userData.totalScore || 0; // Toplam skoru al
 
       // localStorage'a kaydet
@@ -28,13 +28,12 @@ document.getElementById("loginBtn").addEventListener("click", async () => {
       document.getElementById("startScreen").style.display = "block";
 
       errorBox.textContent = "";
-      showNotification(
-        `🎉 Tekrar hoş geldin, ${username}! Toplam skor: ${currentUserTotalScore}`
-      );
+      showNotification(`🎉 Tekrar hoş geldin, ${currentUser}!`);
+
     } else {
       // Yeni kullanıcı - kayıt et
-      await registerUser(username); // ✅ doğru fonksiyon
-      currentUser = username;
+      await registerUser(normalizedUsername, inputUsername);
+      currentUser = inputUsername;
       currentUserTotalScore = 0;
 
       // localStorage'a kaydet
@@ -44,7 +43,7 @@ document.getElementById("loginBtn").addEventListener("click", async () => {
       document.getElementById("startScreen").style.display = "block";
 
       errorBox.textContent = "";
-      showNotification(`🎊 Hoş geldin, ${username}! İlk kez oyun oynuyorsun.`);
+      showNotification(`🎊 Hoş geldin, ${inputUsername}! İlk kez oyun oynuyorsun.`);
     }
   } catch (err) {
     console.error("Hata oluştu:", err);
@@ -100,15 +99,16 @@ function showModernPopup(message, type = "info") {
   }, 3000);
 }
 
-async function registerUser(username) {
-  await db.collection("users").doc(username).set({
-    username: username,
+async function registerUser(docId, originalName) {
+  await db.collection("users").doc(docId).set({
+    username: originalName, // kullanıcıya gösterilecek hali
     totalScore: 0,
     bestScore: 0,
     gamesPlayed: 0,
     createdAt: firebase.firestore.FieldValue.serverTimestamp(),
   });
 }
+
 
 async function updateScore(newScore) {
   if (!window.currentUser) return;
@@ -586,6 +586,11 @@ function drawPowerups(deltaTime) {
 }
 // Game over fonksiyonunda Firebase skor güncellemesi
 async function gameOver() {
+  if (!navigator.onLine) {
+    showNotification("📴 İnternet bağlantısı yok. Lütfen bağlanın!", "warning");
+    return;
+  }
+  
   const gameScore = Math.floor(score);
   console.log("🛑 gameOver başladı | Skor:", gameScore);
 
@@ -1594,6 +1599,11 @@ async function showScoreList() {
   }
 }
 function submitScore() {
+  if (!navigator.onLine) {
+    showNotification("📴 İnternet bağlantısı yok. Lütfen bağlanın!", "warning");
+    return;
+  }
+  
   const username = document.getElementById("username").value.trim();
   const score = parseInt(document.getElementById("finalScore").innerText || 0);
 
@@ -1614,10 +1624,27 @@ function showLoginScreen() {
 }
 
 // Gelişmiş login fonksiyonu
+function generateDeviceId() {
+  let deviceId = localStorage.getItem("deviceId");
+  if (!deviceId) {
+    deviceId = "device_" + Date.now() + "_" + Math.random().toString(36).substr(2, 9);
+    localStorage.setItem("deviceId", deviceId);
+  }
+  return deviceId;
+}
+
 // 🔄 Geliştirilmiş login fonksiyonu
 async function handleAdvancedLogin() {
+  if (!navigator.onLine) {
+    showNotification("📴 İnternet bağlantısı yok. Lütfen bağlanın!", "warning");
+    return;
+  }
+  
   const usernameInput = document.getElementById("usernameInput");
-  const username = usernameInput.value.trim().toLowerCase();
+  const inputUsername = usernameInput.value.trim();
+const normalizedUsername = inputUsername.toLowerCase();
+
+  const deviceId = generateDeviceId(); // ✅ Cihaz ID'si alınır
 
   if (!username) {
     alert("Lütfen kullanıcı adınızı girin.");
@@ -1633,113 +1660,69 @@ async function handleAdvancedLogin() {
   }
 
   try {
-    // Bu cihazda daha önce kullanılmış kullanıcı adlarını kontrol et
-    const deviceUsers = JSON.parse(localStorage.getItem("deviceUsers") || "[]");
-    const isMyDevice = deviceUsers.includes(username);
-
-    console.log("🔍 Cihaz kullanıcıları:", deviceUsers);
-    console.log("🔍 Aranan kullanıcı:", username);
-    console.log("🔍 Bu cihazda var mı?", isMyDevice);
-
-    // Şu anki localStorage kullanıcısı
-    const currentStoredUser = localStorage.getItem("currentUser");
-    const previousLoginCount = parseInt(
-      localStorage.getItem("userLoginCount") || "0"
-    );
-
-    // Eğer şu anda aktif kullanıcıysa ve daha önce giriş yapmışsa
-    if (currentStoredUser === username && previousLoginCount > 0) {
-      console.log("🔄 Aynı kullanıcı tekrar giriş yapıyor");
-
-      currentUser = username;
-
-      // Firebase'den güncel skorunu al
-      const userRef = db.collection("users").doc(username);
-      const userDoc = await userRef.get();
-      if (userDoc.exists) {
-        const userData = userDoc.data();
-        currentUserTotalScore = userData.totalScore || 0;
-      }
-
-      const newLoginCount = previousLoginCount + 1;
-      localStorage.setItem("userLoginCount", newLoginCount.toString());
-      localStorage.setItem("lastLoginTime", new Date().toISOString());
-
-      showWelcomeBackMessage(username, newLoginCount);
-      showStartScreen();
-      return; // ✅ Burada çıkış yap
-    }
-
-    // Firebase'de kullanıcıyı kontrol et
     const userRef = db.collection("users").doc(username);
     const userDoc = await userRef.get();
 
     if (userDoc.exists) {
-      console.log("👤 Kullanıcı Firebase'de bulundu");
+      const userData = userDoc.data();
 
-      if (isMyDevice) {
-        console.log("✅ Kendi cihazındaki kullanıcı - izin veriliyor");
-
-        // Kullanıcı verilerini al
-        const userData = userDoc.data();
-        currentUser = username;
-        currentUserTotalScore = userData.totalScore || 0;
-
-        // localStorage'ı güncelle
-        localStorage.setItem("currentUser", username);
-        localStorage.setItem("userLoginCount", "1");
-        localStorage.setItem("lastLoginTime", new Date().toISOString());
-
-        // Son giriş zamanını güncelle
-        await userRef.update({
-          lastLoginAt: firebase.firestore.FieldValue.serverTimestamp(),
-        });
-
-        showWelcomeBackMessage(username, 1);
-        showStartScreen();
-        return; // ✅ Burada çıkış yap
-      } else {
+      // ✅ Cihaz ID'si kontrolü
+      if (userData.deviceId !== deviceId) {
         console.log("❌ Başka cihazda kullanılmış - izin verilmiyor");
 
-        // HATA: Burada return eksikti!
         showModernPopup(
           "⚠️ Bu kullanıcı adı başka bir cihazda kullanılıyor!",
           "warning"
         );
+
         usernameInput.focus();
         usernameInput.select();
-        return; // ⚠️ Bu satır eksikti - eklendi!
+        return;
       }
+
+      console.log("✅ Aynı cihazdan giriş yapılıyor - izin verildi");
+
+      // Giriş işlemleri
+      currentUser = username;
+      currentUserTotalScore = userData.totalScore || 0;
+
+      localStorage.setItem("currentUser", username);
+      localStorage.setItem("userLoginCount", "1");
+      localStorage.setItem("lastLoginTime", new Date().toISOString());
+
+      await userRef.update({
+        lastLoginAt: firebase.firestore.FieldValue.serverTimestamp(),
+      });
+
+      showWelcomeBackMessage(username, 1);
+      showStartScreen();
+      return;
     }
 
+    // ✅ Yeni kullanıcı kaydı
     console.log("✨ Yeni kullanıcı oluşturuluyor");
 
-    // Yeni kullanıcı oluştur
-    const userData = {
+    const newUserData = {
       username: username,
       totalScore: 0,
+      bestScore: 0,
+      gamesPlayed: 0,
       createdAt: firebase.firestore.FieldValue.serverTimestamp(),
       lastLoginAt: firebase.firestore.FieldValue.serverTimestamp(),
-      deviceId: generateDeviceId(),
+      deviceId: deviceId, // ✅ Firebase'e cihaz ID kaydedilir
     };
 
-    await userRef.set(userData);
+    await userRef.set(newUserData);
 
-    // Bu cihazın kullanıcı listesine ekle
-    if (!deviceUsers.includes(username)) {
-      deviceUsers.push(username);
-      localStorage.setItem("deviceUsers", JSON.stringify(deviceUsers));
-      console.log("📝 Cihaz kullanıcı listesi güncellendi:", deviceUsers);
-    }
-
-    // localStorage'a kaydet
     currentUser = username;
     currentUserTotalScore = 0;
+
     localStorage.setItem("currentUser", username);
     localStorage.setItem("userLoginCount", "1");
     localStorage.setItem("lastLoginTime", new Date().toISOString());
 
     console.log("✅ Yeni kullanıcı başarıyla oluşturuldu:", username);
+
     showFirstTimeWelcome(username);
     showStartScreen();
   } catch (error) {
@@ -1748,6 +1731,7 @@ async function handleAdvancedLogin() {
     usernameInput.focus();
   }
 }
+
 // Cihaz kimliği oluşturma fonksiyonu
 function generateDeviceId() {
   let deviceId = localStorage.getItem("deviceId");
