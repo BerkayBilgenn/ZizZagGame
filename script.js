@@ -304,7 +304,7 @@ document.addEventListener("DOMContentLoaded", function () {
 });
 
 // Kullanıcı bazlı skor sistemi için değişkenler (mevcut değişkenlerin yerine)
-let currentUser = localStorage.getItem("currentUser") || "";
+window.currentUser = localStorage.getItem("currentUser") || "";
 let currentUserTotalScore = 0; // Bu satırı ekleyin
 let userScores = JSON.parse(localStorage.getItem("userScores") || "{}");
 
@@ -349,6 +349,56 @@ async function updateUserScore(newScore) {
     console.error("Skor güncellenirken hata:", error);
   }
 }
+
+window.addEventListener("load", () => {
+  setupRealtimeUserCount();
+});
+
+
+// Toplam kullanıcı sayısını hem başta hem de anlık olarak güncelleyen fonksiyon
+function setupRealtimeUserCount() {
+  const totalUserElement = document.getElementById("totalUserCount");
+  if (!totalUserElement) {
+    console.warn("❌ #totalUserCount elementi bulunamadı!");
+    return;
+  }
+
+  // 1. Başlangıçta bir defa yükle
+  db.collection("users").get().then(snapshot => {
+    totalUserElement.textContent = `Toplam ${snapshot.size} oyuncu katıldı 🎮`;
+  }).catch(error => {
+    console.error("❌ İlk kullanıcı sayısı alınamadı:", error);
+  });
+
+  // 2. Gerçek zamanlı olarak Firestore'dan dinle
+  db.collection("users").onSnapshot(snapshot => {
+    totalUserElement.textContent = `Toplam ${snapshot.size} oyuncu katıldı 🎮`;
+  });
+}
+
+async function getTotalUserCount() {
+  try {
+    const snapshot = await db.collection("users").get();
+    const count = snapshot.size;
+
+    const totalUserElement = document.getElementById("totalUserCount");
+    if (totalUserElement) {
+      totalUserElement.textContent = `Toplam ${count} oyuncu katıldı 🎮`;
+    }
+  } catch (error) {
+    console.error("Kullanıcı sayısı alınamadı:", error);
+  }
+}
+
+window.addEventListener("load", () => {
+  resizeCanvas();         // ⬅️ İlk açılışta canvas'ı boyutlandır
+  getTotalUserCount();    // Var olan işlev
+});
+
+// ⬇️ Pencere yeniden boyutlandığında canvas'ı güncelle
+window.addEventListener("resize", resizeCanvas);
+
+
 
 function restartGame() {
   // Önceki animasyonu durdur
@@ -690,12 +740,23 @@ function drawPowerups(deltaTime) {
 }
 // Game over fonksiyonunda Firebase skor güncellemesi
 async function gameOver() {
+  // 🐛 BUG FIX: Remove this line that's causing the error
+  // const gameScore = Math.floor(score); // ← DELETE THIS LINE
+  
+  // Instead, calculate gameScore at the top, before using it
+  const gameScore = Math.floor(score);
+  
+  console.log("🎯 Skor gönderiliyor - Kullanıcı:", currentUser, "| Skor:", gameScore);
+
+  if (!currentUser) {
+    console.error("❌ currentUser boş, skor kaydedilemez");
+    return;
+  }
   if (!navigator.onLine) {
     showNotification("📴 İnternet bağlantısı yok. Lütfen bağlanın!", "warning");
     return;
   }
 
-  const gameScore = Math.floor(score);
   console.log("🛑 gameOver başladı | Skor:", gameScore);
 
   // Debug - Değerleri kontrol et
@@ -746,7 +807,9 @@ async function gameOver() {
     );
 
     const result = await updateAllUserStatsFirebase(currentUser, gameScore);
-
+    console.log("🧪 Kullanıcı adı:", currentUser);
+    console.log("🧪 Firebase doküman ID var mı?", (await db.collection("users").doc(currentUser).get()).exists);
+    
     console.log("📈 Firebase sonucu alındı:", result);
     console.log("🏆 Yeni rekor mu:", result.isNewRecord);
     console.log("📊 En iyi skor:", result.bestScore);
@@ -800,8 +863,37 @@ async function gameOver() {
   console.log("🏁 gameOver() fonksiyonu tamamlandı");
 }
 
+// Mevcut updateAllUserStatsFirebase fonksiyonunuzu bu kodla değiştirin:
+
 async function updateAllUserStatsFirebase(username, newScore) {
   try {
+    // 🔒 GÜVENLİK KORUMASI BAŞLANGICI
+    const deviceId = getDeviceFingerprint();
+    const now = Date.now();
+    
+    // Rate limiting kontrolü
+    const lastSubmitKey = `lastSubmit_${deviceId}`;
+    const lastSubmit = localStorage.getItem(lastSubmitKey);
+    
+    if (lastSubmit && (now - parseInt(lastSubmit)) < 30000) {
+      const remainingTime = Math.ceil((30000 - (now - parseInt(lastSubmit))) / 1000);
+      throw new Error(`⏰ ${remainingTime} saniye daha bekleyin!`);
+    }
+    
+    // Günlük limit kontrolü
+    const todayKey = `dailyCount_${deviceId}_${new Date().toDateString()}`;
+    const todayCount = parseInt(localStorage.getItem(todayKey) || '0');
+    
+    if (todayCount >= 50) {
+      throw new Error('📊 Günlük skor gönderim limitine ulaştınız!');
+    }
+    
+    // Basit skor kontrolü
+    if (typeof newScore !== "number" || newScore < 0 || newScore > 999999) {
+      throw new Error('❌ Geçersiz skor değeri!');
+    }
+    // 🔒 GÜVENLİK KORUMASI SONU
+    
     console.log(`📤 ${username} için tüm veriler güncelleniyor...`);
     console.log(`🎯 Yeni skor: ${newScore}`);
 
@@ -827,6 +919,14 @@ async function updateAllUserStatsFirebase(username, newScore) {
       totalScore: (userData.totalScore || 0) + newScore,
       gamesPlayed: (userData.gamesPlayed || 0) + 1,
       lastPlayed: new Date(),
+      // 🔒 Güvenlik bilgileri ekle
+      deviceId: deviceId,
+      lastDeviceInfo: {
+        userAgent: navigator.userAgent.slice(0, 100),
+        screenSize: `${screen.width}x${screen.height}`,
+        language: navigator.language,
+        timestamp: now
+      }
     };
 
     // Best score kontrolü
@@ -841,6 +941,10 @@ async function updateAllUserStatsFirebase(username, newScore) {
     // Firebase'e gönder
     await userRef.set(updatedData, { merge: true });
 
+    // 🔒 Rate limiting bilgilerini güncelle
+    localStorage.setItem(lastSubmitKey, now.toString());
+    localStorage.setItem(todayKey, (todayCount + 1).toString());
+
     console.log("✅ Firebase güncelleme başarılı");
 
     return {
@@ -851,14 +955,41 @@ async function updateAllUserStatsFirebase(username, newScore) {
     };
   } catch (error) {
     console.error("❌ Firebase güncelleme hatası:", error);
+    // Güvenlik hatalarını kullanıcıya göster
+    if (error.message.includes('saniye') || error.message.includes('limit') || error.message.includes('Geçersiz')) {
+      alert(error.message);
+    }
     return {
       isNewRecord: false,
-      totalScore: currentUserTotalScore + newScore,
+      totalScore: 0,
       gamesPlayed: 0,
       bestScore: 0,
     };
   }
 }
+
+// Bu helper fonksiyonu da kodunuzun herhangi bir yerine ekleyin:
+function getDeviceFingerprint() {
+  const canvas = document.createElement('canvas');
+  const ctx = canvas.getContext('2d');
+  ctx.textBaseline = 'top';
+  ctx.font = '14px Arial';
+  ctx.fillText('fingerprint', 2, 2);
+
+  return btoa(
+    navigator.userAgent +
+    screen.width + 'x' + screen.height +
+    navigator.language +
+    canvas.toDataURL() + // ← burayı düzelt!
+    new Date().getTimezoneOffset()
+  ).slice(0, 16);
+}
+
+
+//Offline modda firabaseye kendi yönetme hakkı tanıyoz
+
+
+
 // Firebase'den skor listesini çekme
 async function showFirebaseScoreList() {
   try {
@@ -1010,11 +1141,11 @@ function setupRealtimeUsernameCheck() {
     }
 
     // Özel karakterleri kontrol et
-    if (!/^[a-zA-Z0-9_]+$/.test(username)) {
-      loginError.textContent = "Sadece harf, rakam ve _ kullanabilirsiniz.";
-      loginBtn.disabled = true;
+    if (!/^[a-zA-Z0-9_]+$/.test(inputUsername)) {
+      showModernPopup("❌ Sadece harf, rakam ve _ karakterine izin verilir.", "error");
       return;
     }
+    
 
     // Loading göster
     loginError.textContent = "Kontrol ediliyor...";
@@ -1418,31 +1549,7 @@ function shareScore() {
   }
 }
 
-// Eski tarayıcılar için fallback kopyalama fonksiyonu
-function fallbackCopyTextToClipboard(text) {
-  const textArea = document.createElement("textarea");
-  textArea.value = text;
 
-  // Görünmez yap ama erişilebilir tut
-  textArea.style.top = "0";
-  textArea.style.left = "0";
-  textArea.style.position = "fixed";
-  textArea.style.opacity = "0";
-
-  document.body.appendChild(textArea);
-  textArea.focus();
-  textArea.select();
-
-  try {
-    const successful = document.execCommand("copy");
-    const msg = successful ? "başarılı" : "başarısız";
-    console.log("Fallback kopyalama " + msg);
-  } catch (err) {
-    console.error("Fallback kopyalama hatası", err);
-  }
-
-  document.body.removeChild(textArea);
-}
 
 // Paylaş butonuna event listener ekle
 document.addEventListener("DOMContentLoaded", function () {
@@ -1890,14 +1997,15 @@ async function handleAdvancedLogin() {
 
   const deviceId = generateDeviceId();
 
-  if (!inputUsername) {
-    alert("Lütfen kullanıcı adınızı girin.");
-    usernameInput.focus();
-    return;
-  }
+  usernameInput.classList.add("shake");
+
+setTimeout(() => {
+  usernameInput.classList.remove("shake");
+}, 500);
+
 
   if (inputUsername.length < 3) {
-    alert("Kullanıcı adı en az 3 karakter olmalıdır.");
+    showModernPopup("🚫 Kullanıcı adı en az 3 karakter olmalıdır.", "warning");
     usernameInput.focus();
     usernameInput.select();
     return;
@@ -2329,7 +2437,13 @@ function hideScoreList() {
 }
 async function loadLeaderboard() {
   const leaderboardList = document.getElementById("leaderboardList");
-  leaderboardList.innerHTML = ""; // Önce temizle
+
+  if (!leaderboardList) {
+  //  console.warn("❌ 'leaderboardList' elementi DOM'da bulunamadı.");
+    return;
+  }
+
+  leaderboardList.innerHTML = ""; // Temizle
 
   try {
     const snapshot = await db
@@ -2345,7 +2459,7 @@ async function loadLeaderboard() {
       leaderboardList.appendChild(li);
     });
   } catch (error) {
-    console.error("Liderlik tablosu yüklenemedi:", error);
+    console.error("⚠️ Liderlik tablosu yüklenemedi:", error);
   }
 }
 

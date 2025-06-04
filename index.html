@@ -15,24 +15,48 @@
       rel="stylesheet"
     />
     <link rel="stylesheet" href="style.css" />
-    <!-- Firebase Uyumlu (compat) sürümler -->
-    <script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-app-compat.js"></script>
-    <script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-firestore-compat.js"></script>
+  
 
-    <script>
-      const firebaseConfig = {
-        apiKey: "AIzaSyBfpvlGZ1g1jRG2ps2rGP3OC3WBU2sxXnI",
-        authDomain: "zigzaggame-e8cc5.firebaseapp.com",
-        projectId: "zigzaggame-e8cc5",
-        storageBucket: "zigzaggame-e8cc5.appspot.com",
-        messagingSenderId: "990084578788",
-        appId: "1:990084578788:web:4e50ace7bb733c99381bf1",
-      };
 
-      // Firebase’i başlat
-      firebase.initializeApp(firebaseConfig);
-      const db = firebase.firestore();
-    </script>
+    <!-- Firebase compat sürümleri (offline destekli kullanacağız) -->
+<script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-app-compat.js"></script>
+<script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-firestore-compat.js"></script>
+
+<script>
+  const firebaseConfig = {
+    apiKey: "AIzaSyBfpvlGZ1g1jRG2ps2rGP3OC3WBU2sxXnI",
+    authDomain: "zigzaggame-e8cc5.firebaseapp.com",
+    projectId: "zigzaggame-e8cc5",
+    storageBucket: "zigzaggame-e8cc5.appspot.com",
+    messagingSenderId: "990084578788",
+    appId: "1:990084578788:web:4e50ace7bb733c99381bf1",
+  };
+
+  // Firebase’i başlat
+  firebase.initializeApp(firebaseConfig);
+
+  // Firestore örneğini al
+  const db = firebase.firestore();
+
+  // 🔁 OFFLINE veri desteğini etkinleştir
+  db.enablePersistence({ synchronizeTabs: true })
+    .then(() => {
+      console.log("✅ Offline veri desteği aktif");
+    })
+    .catch((err) => {
+      if (err.code === "failed-precondition") {
+        console.warn("❗ Yalnızca bir sekmede çalışabilir.");
+      } else if (err.code === "unimplemented") {
+        console.error("❌ Tarayıcı offline desteğini desteklemiyor.");
+      } else {
+        console.error("🔴 Persistence hatası:", err);
+      }
+    });
+
+  // db'yi globalde kullanılabilir yap (script.js erişsin)
+  window.db = db;
+</script>
+
   </head>
   <body>
     <!-- Ana Oyun Konteyneri -->
@@ -47,10 +71,12 @@
         <div class="login-wrapper">
           <h1 id="loginTitle">
             <span class="title-icon">🎯</span>
-            ZigZag Rota
+        ZigZag Rota
           </h1>
 
           <p id="loginSubtitle">İstanbul Gelişim Üniversitesi</p>
+          
+<p id="totalUserCount" class="user-count">Kullanıcılar yükleniyor... ⏳</p>
 
           <div class="login-form">
             <div class="input-group">
@@ -142,17 +168,20 @@
       ></div>
 
       <!-- Başarılar Listesi Modal -->
-      <div id="scoreList" class="modal">
-        <div class="modal-content">
-          <div class="modal-header">
-            <h3>🏆 Başarılar</h3>
-            <button id="closeScoreList" class="close-btn">&times;</button>
-          </div>
-          <div class="modal-body">
-            <ul id="scoreItems"></ul>
-          </div>
-        </div>
+    <!-- Başarılar Listesi Modal -->
+<div id="scoreList" class="modal">
+    <div class="modal-content">
+      <div class="modal-header">
+        <h3>🏆 Başarılar</h3>
+        <button id="closeScoreList" class="close-btn">&times;</button>
       </div>
+      <div class="modal-body">
+        <ul id="scoreItems"></ul>
+  
+      </div>
+    </div>
+  </div>
+  
 
       <!-- Oyun Bitti Ekranı -->
       <div id="gameOver" class="modal">
@@ -187,6 +216,8 @@
 <div id="notification" style="display: none;"></div>
 <div id="welcomePopup" class="welcome-popup" style="display: none;"></div>
     <!-- Kullanıcı Değiştirme Modal -->
-    <script src="script.js" defer></script>
+    <script  src="script.js" defer></script>
+ 
+
   </body>
 </html>
