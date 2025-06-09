@@ -446,6 +446,19 @@ body::before {
     position: relative;
     width: 100%;
 }
+#dailyPlays {
+  font-size: 1rem;
+  font-weight: 700;
+  margin-bottom: 10px;
+  color: #00ffd5;
+  text-shadow: 0 0 8px rgba(0, 255, 213, 0.5);
+}
+button.disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+  pointer-events: auto; /* Infobox gösterimi için */
+}
+
 
 #usernameInput {
     width: 100%;
