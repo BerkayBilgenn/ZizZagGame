@@ -958,10 +958,10 @@ function showLimitPopupDebounced() {
   }
 }
 function isOverDailyLimit() {
-  const deviceId = getDeviceFingerprint();
+
   const todayKey = `dailyCount_${currentUser}_${new Date().toDateString()}`;
   const count = parseInt(localStorage.getItem(todayKey) || "0");
-  return count >= 1; // test bitince 15 yapmayı unutma he
+  return count >= 1; // test bitince 10 yapmayı unutma he
 }
 async function updateAllUserStatsFirebase(username, newScore) {
   const deviceId = getDeviceFingerprint();
@@ -971,7 +971,7 @@ async function updateAllUserStatsFirebase(username, newScore) {
   const todayKey = `dailyCount_${currentUser}_${new Date().toDateString()}`;
   // localStorage'daki bu satır sadece fallback olarak tutuluyor
   const localTodayCount = parseInt(localStorage.getItem(todayKey) || "0");
-  const remaining = Math.max(0, 1 - localTodayCount); // 25 -> 15 değişti
+  const remaining = Math.max(0, 1 - localTodayCount); // test için 1 yaptım mallık yapıp 10 yapmayı unutma
   const dailyPlaysEl = document.getElementById("dailyPlays");
   if (dailyPlaysEl) {
     dailyPlaysEl.textContent = `🎮 Kalan Hak: ${remaining}`;
@@ -1044,7 +1044,7 @@ async function updateAllUserStatsFirebase(username, newScore) {
     localStorage.setItem(todayKey, (todayCount + 1).toString());
  
     const nextCount = todayCount + 1;
-    const remainingPlays = Math.max(0, 1 - nextCount);  //TEST SONRASI YİNE 15 YAAAAAP
+    const remainingPlays = Math.max(0, 10 - nextCount);  //TEST SONRASI YİNE 15 YAAAAAP
  
     // Kalan oyun hakkını göster
     showNotification(`🎮 Kalan oyun hakkınız: ${remainingPlays}`, "info");
@@ -1252,7 +1252,7 @@ function setupRealtimeUsernameCheck() {
     }
 
     // Özel karakterleri kontrol et
-    if (!/^[a-zA-Z0-9_]+$/.test(inputUsername)) {
+    if (!/^[a-zA-Z0-9_]+$/.test(username)) {
       showModernPopup(
         "❌ Sadece harf, rakam ve _ karakterine izin verilir.",
         "error"
