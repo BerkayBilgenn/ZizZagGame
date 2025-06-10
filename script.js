@@ -793,9 +793,6 @@ function drawPowerups(deltaTime) {
 }
 // Game over fonksiyonunda Firebase skor güncellemesi
 async function gameOver() {
-  // 🐛 BUG FIX: Remove this line that's causing the error
-  // const gameScore = Math.floor(score); // ← DELETE THIS LINE
-
   // Instead, calculate gameScore at the top, before using it
   const gameScore = Math.floor(score);
 
@@ -855,6 +852,9 @@ async function gameOver() {
 
   console.log("✅ UI elementleri ayarlandı");
 
+  // 🐛 FIX: result değişkenini try bloğunun dışında tanımla
+  let result = null;
+
   try {
     console.log("🔄 Firebase çağrısı başlatılıyor...");
     console.log(
@@ -864,7 +864,7 @@ async function gameOver() {
       gameScore
     );
 
-    const result = await updateAllUserStatsFirebase(currentUser, gameScore);
+    result = await updateAllUserStatsFirebase(currentUser, gameScore);
     console.log("🧪 Kullanıcı adı:", currentUser);
     console.log(
       "🧪 Firebase doküman ID var mı?",
@@ -921,8 +921,8 @@ async function gameOver() {
     }
   }
 
-  // Eğer kalan hak 0 ise tekrar oynama engellensin
-  if (result.remainingPlays <= 0) {
+  // 🐛 FIX: result'ın null olup olmadığını kontrol et
+  if (result && result.remainingPlays <= 0) {
     const restartBtn = document.getElementById("startButtonRestart");
     const startMainBtn = document.getElementById("startButtonMain");
 
