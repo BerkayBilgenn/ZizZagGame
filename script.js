@@ -255,28 +255,29 @@ function resizeCanvas() {
 }
 
 function startGame() {
-  lastTime = performance.now(); // FPS normalizasyonu için
-
-  console.log("✅ startGame çalıştı");
-  console.log("gameStarted:", gameStarted, "isGameOver:", isGameOver);
-
-  // Önceki oyunu temizle
-  if (animationId) {
-    cancelAnimationFrame(animationId);
+  if (isOverDailyLimit()) {
+    isDailyLimitReached = true;
+    showLimitPopup();
+    return;
   }
-
+  
+  lastTime = performance.now();
+  console.log("✅ startGame çalıştı");
+ 
+  if (animationId) {
+      cancelAnimationFrame(animationId);
+  }
+ 
   gameStarted = true;
   isGameOver = false;
   startScreen.style.display = "none";
   hud.style.display = "block";
   gameOverDiv.style.display = "none";
-
-  // Oyun değişkenlerini sıfırla
+ 
   resetGameVariables();
-
   checkDailyStreak();
   draw();
-}
+ }
 
 function resetGameVariables() {
   player = {
@@ -350,30 +351,67 @@ async function updateUserScore(newScore) {
   }
 }
 
+function enforceDailyLimit() {
+  const limitMessage = () => {
+      showLimitPopup(); // Direkt showLimitPopup'ı çağır
+  };
+  
+  const startBtn = document.getElementById("startButtonMain");
+  const restartBtn = document.getElementById("startButtonRestart");
+  
+  [startBtn, restartBtn].forEach((btn) => {
+      if (btn) {
+          btn.disabled = true;
+          btn.classList.add("disabled");
+          
+          // Önceki click event'i varsa kaldır
+          const newBtn = btn.cloneNode(true);
+          btn.parentNode.replaceChild(newBtn, btn);
+          
+          // Yeni click event
+          newBtn.addEventListener("click", limitMessage);
+      }
+  });
+}
+function resetDailyLimitIfNewDay() {
+  const today = new Date().toDateString();
+  const deviceId = getDeviceFingerprint();
+  const todayKey = `dailyCount_${currentUser}_${today}`;
+
+  // Eğer daha önceki gün oynanmışsa ve bugün sıfırlanmamışsa
+  const lastReset = localStorage.getItem("lastDailyReset");
+  if (lastReset !== today) {
+    localStorage.setItem("lastDailyReset", today);
+    localStorage.setItem(todayKey, "0");
+    isDailyLimitReached = false;
+
+    // Butonları tekrar aktifleştir
+    const startBtn = document.getElementById("startButtonMain");
+    const restartBtn = document.getElementById("startButtonRestart");
+    [startBtn, restartBtn].forEach((btn) => {
+      if (btn) {
+        btn.disabled = false;
+        btn.classList.remove("disabled");
+      }
+    });
+  }
+}
+ 
+
 window.addEventListener("load", () => {
   resizeCanvas();
   setupRealtimeUserCount();
   getTotalUserCount();
-
+  resetDailyLimitIfNewDay();
+  
   setTimeout(() => {
-    showRegisteredUsersOnThisDevice();
+      showRegisteredUsersOnThisDevice();
   }, 2000);
 
-  // Günlük limit kontrolü
-  const deviceId = getDeviceFingerprint();
-  const todayKey = `dailyCount_${deviceId}_${new Date().toDateString()}`;
-  const count = parseInt(localStorage.getItem(todayKey) || "0");
-
-  if (count >= 15) {
-    isDailyLimitReached = true;
-
-    // Ana ekran butonu
-    const startBtn = document.getElementById("startButtonMain");
-    if (startBtn) {
-      startBtn.disabled = true;
-      startBtn.classList.add("disabled");
-      startBtn.addEventListener("click", showLimitPopup);
-    }
+  // Günlük limit kontrolü - sadece popup için hazırla
+  if (isOverDailyLimit()) {
+      isDailyLimitReached = true;
+      // enforceDailyLimit(); ← Bunu kaldır
   }
 });
 
@@ -418,47 +456,32 @@ async function getTotalUserCount() {
 // ⬇️ Pencere yeniden boyutlandığında canvas'ı güncelle
 window.addEventListener("resize", resizeCanvas);
 
+
+
 function restartGame() {
-  if (isDailyLimitReached) {
-    showLimitPopup();
-    return;
+  if (isOverDailyLimit()) {
+      isDailyLimitReached = true;
+      showLimitPopup();
+      // enforceDailyLimit(); ← Bunu da kaldır
+      return;
   }
 
   if (animationId) {
-    cancelAnimationFrame(animationId);
-    animationId = null;
-  }
-
-  if (isDailyLimitReached) {
-    showLimitPopup();
-    return;
+      cancelAnimationFrame(animationId);
+      animationId = null;
   }
 
   lastTime = performance.now();
-  // Önceki animasyonu durdur
-  if (animationId) {
-    cancelAnimationFrame(animationId);
-    animationId = null;
-  }
-
-  // Canvas'ı yeniden boyutlandır
   resizeCanvas();
-
-  // Oyun değişkenlerini sıfırla
   resetGameVariables();
-
-  // Power-up timer'ını sıfırla - ÖNEMLİ!
   lastPowerupTime = 0;
-
-  // Oyun durumlarını ayarla
+  
   isGameOver = false;
   gameStarted = true;
 
-  // UI elementlerini düzenle
   gameOverDiv.style.display = "none";
   hud.style.display = "block";
 
-  // Oyunu başlat
   draw();
 }
 
@@ -914,22 +937,41 @@ async function gameOver() {
 
   console.log("🏁 gameOver() fonksiyonu tamamlandı");
 }
+
 function showLimitPopup() {
+  // Zaten açık popup varsa hiçbir şey yapma
+  if (document.getElementById("modernPopup")) {
+      return;
+  }
+  
   showModernPopup(
-    "🎮 Günlük oyun hakkınız doldu.\n🕛 Yeni haklar 00:00’da yüklenecek.",
-    "warning"
+      "🎮 Günlük oyun hakkınız doldu.\n🕛 Yeni haklar 00:00'da yüklenecek.",
+      "warning"
   );
 }
-
+// En güvenli çözüm - Debounce ile popup kontrolü
+let isPopupShowing = false;
+function showLimitPopupDebounced() {
+  // Eğer popup gösteriliyorsa, hiçbir şey yapma
+  if (isPopupShowing) {
+      return;
+  }
+}
+function isOverDailyLimit() {
+  const deviceId = getDeviceFingerprint();
+  const todayKey = `dailyCount_${currentUser}_${new Date().toDateString()}`;
+  const count = parseInt(localStorage.getItem(todayKey) || "0");
+  return count >= 1; // test bitince 15 yapmayı unutma he
+}
 async function updateAllUserStatsFirebase(username, newScore) {
   const deviceId = getDeviceFingerprint();
   const now = Date.now();
-
-  const lastSubmitKey = `lastSubmit_${deviceId}`;
-  const todayKey = `dailyCount_${deviceId}_${new Date().toDateString()}`;
+ 
+  const lastSubmitKey = `lastSubmit_${currentUser}`;
+  const todayKey = `dailyCount_${currentUser}_${new Date().toDateString()}`;
   // localStorage'daki bu satır sadece fallback olarak tutuluyor
   const localTodayCount = parseInt(localStorage.getItem(todayKey) || "0");
-  const remaining = Math.max(0, 25 - localTodayCount);
+  const remaining = Math.max(0, 1 - localTodayCount); // 25 -> 15 değişti
   const dailyPlaysEl = document.getElementById("dailyPlays");
   if (dailyPlaysEl) {
     dailyPlaysEl.textContent = `🎮 Kalan Hak: ${remaining}`;
@@ -937,7 +979,7 @@ async function updateAllUserStatsFirebase(username, newScore) {
   try {
     const userRef = db.collection("users").doc(username);
     const userDoc = await userRef.get();
-
+ 
     let userData = {
       bestScore: 0,
       totalScore: 0,
@@ -947,32 +989,32 @@ async function updateAllUserStatsFirebase(username, newScore) {
       dailySubmitCount: 0,
       lastSubmitAt: null,
     };
-
+ 
     if (userDoc.exists) {
       userData = { ...userData, ...userDoc.data() };
     }
-
+ 
     // 🔒 Firestore sunucu zamanına göre günlük kontrol
     let todayCount = userData.dailySubmitCount || 0;
     const lastSubmitAt = userData.lastSubmitAt?.toDate?.();
-
+ 
     const nowDate = new Date();
-
+ 
     if (
       lastSubmitAt &&
       lastSubmitAt.toDateString() !== nowDate.toDateString()
     ) {
       todayCount = 0; // Yeni gün başladıysa sayaç sıfırlanır
     }
-
-    if (todayCount >= 15) {
+ 
+    if (todayCount >= 1) {  //TEST SONRASI YİNE 15 YAAAAAP
       throw new Error("📊 Günlük skor gönderim limitine ulaştınız!");
     }
-
+ 
     if (typeof newScore !== "number" || newScore < 0 || newScore > 999999) {
       throw new Error("❌ Geçersiz skor değeri!");
     }
-
+ 
     const updatedData = {
       ...userData,
       totalScore: (userData.totalScore || 0) + newScore,
@@ -988,25 +1030,25 @@ async function updateAllUserStatsFirebase(username, newScore) {
       dailySubmitCount: todayCount + 1,
       lastSubmitAt: firebase.firestore.FieldValue.serverTimestamp(),
     };
-
+ 
     let isNewRecord = false;
     if (newScore > (userData.bestScore || 0)) {
       updatedData.bestScore = newScore;
       isNewRecord = true;
     }
-
+ 
     await userRef.set(updatedData, { merge: true });
-
+ 
     // Bu satırlar artık işlevsel değil ama geçmişe uyumluluk için korunuyor:
     localStorage.setItem(lastSubmitKey, now.toString());
     localStorage.setItem(todayKey, (todayCount + 1).toString());
-
+ 
     const nextCount = todayCount + 1;
-    const remainingPlays = Math.max(0, 1 - nextCount);
-
+    const remainingPlays = Math.max(0, 1 - nextCount);  //TEST SONRASI YİNE 15 YAAAAAP
+ 
     // Kalan oyun hakkını göster
     showNotification(`🎮 Kalan oyun hakkınız: ${remainingPlays}`, "info");
-
+ 
     return {
       isNewRecord,
       totalScore: updatedData.totalScore,
@@ -1016,11 +1058,11 @@ async function updateAllUserStatsFirebase(username, newScore) {
     };
   } catch (error) {
     console.error("❌ Firebase güncelleme hatası:", error);
-
+ 
     // Firestore hata alırsa localStorage'a fallback:
-    const remainingPlays = 25 - localTodayCount;
+    const remainingPlays = 1 - localTodayCount; //TEST SONRASI YİNE 15 YAAAAAP
     showNotification(`🎮 Kalan oyun hakkınız: ${remainingPlays}`, "warning");
-
+ 
     if (
       error.message.includes("saniye") ||
       error.message.includes("limit") ||
@@ -1028,7 +1070,7 @@ async function updateAllUserStatsFirebase(username, newScore) {
     ) {
       alert(error.message);
     }
-
+ 
     return {
       isNewRecord: false,
       totalScore: 0,
@@ -1036,7 +1078,7 @@ async function updateAllUserStatsFirebase(username, newScore) {
       bestScore: 0,
     };
   }
-}
+ }
 
 // Bu helper fonksiyonu da kodunuzun herhangi bir yerine ekleyin:
 function getDeviceFingerprint() {
