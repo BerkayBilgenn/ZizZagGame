@@ -961,7 +961,7 @@ function isOverDailyLimit() {
 
   const todayKey = `dailyCount_${currentUser}_${new Date().toDateString()}`;
   const count = parseInt(localStorage.getItem(todayKey) || "0");
-  return count >= 1; // test bitince 10 yapmayı unutma he
+  return count >= 10; // test bitince 10 yapmayı unutma he
 }
 async function updateAllUserStatsFirebase(username, newScore) {
   const deviceId = getDeviceFingerprint();
@@ -971,7 +971,7 @@ async function updateAllUserStatsFirebase(username, newScore) {
   const todayKey = `dailyCount_${currentUser}_${new Date().toDateString()}`;
   // localStorage'daki bu satır sadece fallback olarak tutuluyor
   const localTodayCount = parseInt(localStorage.getItem(todayKey) || "0");
-  const remaining = Math.max(0, 1 - localTodayCount); // test için 1 yaptım mallık yapıp 10 yapmayı unutma
+  const remaining = Math.max(0, 10 - localTodayCount); // test için 1 yaptım mallık yapıp 10 yapmayı unutma
   const dailyPlaysEl = document.getElementById("dailyPlays");
   if (dailyPlaysEl) {
     dailyPlaysEl.textContent = `🎮 Kalan Hak: ${remaining}`;
@@ -1007,7 +1007,7 @@ async function updateAllUserStatsFirebase(username, newScore) {
       todayCount = 0; // Yeni gün başladıysa sayaç sıfırlanır
     }
  
-    if (todayCount >= 1) {  //TEST SONRASI YİNE 15 YAAAAAP
+    if (todayCount >= 10) {  //TEST SONRASI YİNE 15 YAAAAAP
       throw new Error("📊 Günlük skor gönderim limitine ulaştınız!");
     }
  
