@@ -2126,6 +2126,7 @@ async function handleAdvancedLogin() {
 
   const usernameInput = document.getElementById("usernameInput");
   const inputUsername = usernameInput.value.trim();
+
   const normalizedUsername = inputUsername.toLowerCase();
 
   const deviceId = generateDeviceId();
@@ -2178,6 +2179,8 @@ async function handleAdvancedLogin() {
       console.log("✅ Bu cihazda kayıtlı kullanıcı - giriş yapılıyor");
 
       // Giriş işlemleri
+      isDailyLimitReached = false; // 🔥 En önemli satır bu
+      resetDailyLimitIfNewDay(); // varsa çalışır
       currentUser = normalizedUsername;
       currentUserTotalScore = userData.totalScore || 0;
 
