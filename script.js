@@ -342,6 +342,12 @@ async function updateUserScore(newScore) {
 }
 
 function enforceDailyLimit() {
+  // window.onload içinde:
+if (isOverDailyLimit()) {
+  isDailyLimitReached = true;
+  enforceDailyLimit(); // tekrar etkinleştir
+}
+
   const limitMessage = () => {
       showLimitPopup(); // Direkt showLimitPopup'ı çağır
   };
@@ -951,7 +957,7 @@ function isOverDailyLimit() {
 
   const todayKey = `dailyCount_${currentUser}_${new Date().toDateString()}`;
   const count = parseInt(localStorage.getItem(todayKey) || "0");
-  return count >= 10; // test bitince 10 yapmayı unutma he
+  return count >= 1; // test bitince 10 yapmayı unutma he
 }
 async function updateAllUserStatsFirebase(username, newScore) {
   const deviceId = getDeviceFingerprint();
@@ -961,7 +967,7 @@ async function updateAllUserStatsFirebase(username, newScore) {
   const todayKey = `dailyCount_${currentUser}_${new Date().toDateString()}`;
   // localStorage'daki bu satır sadece fallback olarak tutuluyor
   const localTodayCount = parseInt(localStorage.getItem(todayKey) || "0");
-  const remaining = Math.max(0, 10 - localTodayCount); // test için 1 yaptım mallık yapıp 10 yapmayı unutma
+  const remaining = Math.max(0, 1 - localTodayCount); // test için 1 yaptım mallık yapıp 10 yapmayı unutma
   const dailyPlaysEl = document.getElementById("dailyPlays");
   if (dailyPlaysEl) {
     dailyPlaysEl.textContent = `🎮 Kalan Hak: ${remaining}`;
@@ -997,7 +1003,7 @@ async function updateAllUserStatsFirebase(username, newScore) {
       todayCount = 0; // Yeni gün başladıysa sayaç sıfırlanır
     }
  
-    if (todayCount >= 10) {  //TEST SONRASI YİNE 15 YAAAAAP
+    if (todayCount >= 1) {  //TEST SONRASI YİNE 10 YAAAAAP
       throw new Error("📊 Günlük skor gönderim limitine ulaştınız!");
     }
  
@@ -1481,6 +1487,10 @@ function updateUI() {
 }
 
 function draw(timestamp) {
+  if (isDailyLimitReached) {
+    return; // Animasyonu tamamen durdur
+  }
+  
   if (isGameOver || !gameStarted) {
     return;
   }
@@ -1837,6 +1847,8 @@ function fallbackCopyTextToClipboard(text) {
 canvas.addEventListener(
   "touchstart",
   (e) => {
+    if (isDailyLimitReached) return; // kullanıcı hakkı bittiyse tıklama çalışmasın
+
     e.preventDefault();
     if (!isGameOver && gameStarted) {
       player.dir *= -1;
@@ -1848,14 +1860,18 @@ canvas.addEventListener(
 );
 
 canvas.addEventListener("click", () => {
+  if (isDailyLimitReached) return; // kullanıcı hakkı bittiyse tıklama çalışmasın
   if (!isGameOver && gameStarted) {
     player.dir *= -1;
     speed += 0.5 * (1 / 60); // Sabit değer gibi davranır (ortalama 60 FPS'e göre)
     createParticles(player.x, player.y, "#ffffff");
   }
-});
+}
+);
 
 document.addEventListener("keydown", (e) => {
+  if (isDailyLimitReached) return; // kullanıcı hakkı bittiyse tıklama çalışmasın
+
   if (
     (e.code === "Space" || e.code === "ArrowLeft" || e.code === "ArrowRight") &&
     !isGameOver &&
