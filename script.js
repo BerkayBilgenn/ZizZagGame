@@ -126,16 +126,6 @@ let maxGapX = canvas.width - gapSize - 60;
 const minVerticalSpacing = 160; // Dikey boşluk artırıldı
 
 function showWelcomePopup(message) {
-  const popup = document.getElementById("welcomePopup");
-  if (!popup) return;
-
-  popup.textContent = message;
-  popup.style.display = "block";
-
-  // Kapatmak için bekle
-  setTimeout(() => {
-    popup.style.display = "none";
-  }, 3000);
 }
 const popup = document.querySelector(".welcome-popup");
 popup.addEventListener("animationend", () => {
@@ -1541,8 +1531,18 @@ function draw(timestamp) {
     }
 
     // 6) Skor artışı - deltaTime ile normalize edildi
-    score += 0.1 * combo * 60 * window.safeDeltaTime;
+    let baseMultiplier = 0.1;
 
+    if (streak >= 10 && streak < 25) {
+      baseMultiplier = 0.15; // %50 artır
+    } else if (streak >= 25 && streak < 50) {
+      baseMultiplier = 0.2;  // 2 kat
+    } else if (streak >= 50) {
+      baseMultiplier = 0.25; // Daha da hızlan
+    }
+    
+    score += baseMultiplier * combo * 60 * window.safeDeltaTime;
+    
     updateUI();
 
     // 7) Power-up oluşturma — “zaman bazlı” kontrol
