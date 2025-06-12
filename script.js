@@ -245,29 +245,37 @@ function resizeCanvas() {
 }
 
 function startGame() {
-  if (isOverDailyLimit()) {
-    isDailyLimitReached = true;
+  // YENİ GÜVENLİK KONTROLÜ: Oyuna başlamadan önce limiti tekrar kontrol et.
+  // Bu, kullanıcı değiştikten sonra bayrağın takılı kalmasını önler.
+  // isDailyLimitReached bayrağını, o anki kullanıcının limit durumuna göre güncelleriz.
+  isDailyLimitReached = isOverDailyLimit();
+
+  // Artık güncel olan bayrağı kontrol edebiliriz.
+  if (isDailyLimitReached) {
     showLimitPopup();
     return;
   }
-  
+
+  // --- Fonksiyonun geri kalanı tamamen aynı ---
+
+  resizeCanvas(); // 🔥 Bu satır kritik! Canvas yeniden boyutlandırılmalı
   lastTime = performance.now();
   console.log("✅ startGame çalıştı");
- 
+
   if (animationId) {
-      cancelAnimationFrame(animationId);
+    cancelAnimationFrame(animationId);
   }
- 
+
   gameStarted = true;
   isGameOver = false;
   startScreen.style.display = "none";
   hud.style.display = "block";
   gameOverDiv.style.display = "none";
- 
+
   resetGameVariables();
   checkDailyStreak();
   draw();
- }
+}
 
 function resetGameVariables() {
   player = {
@@ -2126,13 +2134,10 @@ async function handleAdvancedLogin() {
 
   const usernameInput = document.getElementById("usernameInput");
   const inputUsername = usernameInput.value.trim();
-
   const normalizedUsername = inputUsername.toLowerCase();
-
   const deviceId = generateDeviceId();
 
   usernameInput.classList.add("shake");
-
   setTimeout(() => {
     usernameInput.classList.remove("shake");
   }, 500);
@@ -2150,27 +2155,17 @@ async function handleAdvancedLogin() {
 
     if (userDoc.exists) {
       const userData = userDoc.data();
-
-      // ✅ YENİ SİSTEM: Cihaz ID'leri array olarak saklanıyor
       let registeredDevices = userData.deviceIds || [];
 
-      // Eski sistemden gelenler için uyumluluk
       if (userData.deviceId && !registeredDevices.includes(userData.deviceId)) {
         registeredDevices.push(userData.deviceId);
       }
 
-      console.log("🔍 Kayıtlı cihazlar:", registeredDevices);
-      console.log("🔍 Mevcut cihaz:", deviceId);
-
-      // ✅ Bu cihaz kayıtlı mı kontrol et
       if (!registeredDevices.includes(deviceId)) {
-        console.log("❌ Bu kullanıcı başka cihaz(lar)da kayıtlı");
-
         showModernPopup(
           `⚠️ "${inputUsername}" kullanıcı adı başka bir cihazda kullanılıyor! Bu cihazda kullanmak için farklı bir isim seçin.`,
           "warning"
         );
-
         usernameInput.focus();
         usernameInput.select();
         return;
@@ -2178,9 +2173,9 @@ async function handleAdvancedLogin() {
 
       console.log("✅ Bu cihazda kayıtlı kullanıcı - giriş yapılıyor");
 
-      // Giriş işlemleri
-      isDailyLimitReached = false; // 🔥 En önemli satır bu
-      resetDailyLimitIfNewDay(); // varsa çalışır
+      // Giriş işlemleri (BURASI ZATEN DOĞRUYDU)
+      isDailyLimitReached = false; // 🔥 Limit bayrağı sıfırlanıyor
+      resetDailyLimitIfNewDay();
       currentUser = normalizedUsername;
       currentUserTotalScore = userData.totalScore || 0;
 
@@ -2200,6 +2195,10 @@ async function handleAdvancedLogin() {
     // ✅ Yeni kullanıcı kaydı
     console.log("✨ Yeni kullanıcı oluşturuluyor:", normalizedUsername);
 
+    // DÜZELTME: Yeni bir kullanıcı kaydolduğunda da limit bayrağını sıfırla.
+    // Bu, önceki oturumdan kalan bir 'limit doldu' durumunu temizler.
+    isDailyLimitReached = false;
+
     const newUserData = {
       username: normalizedUsername,
       displayName: inputUsername,
@@ -2208,7 +2207,7 @@ async function handleAdvancedLogin() {
       gamesPlayed: 0,
       createdAt: firebase.firestore.FieldValue.serverTimestamp(),
       lastLoginAt: firebase.firestore.FieldValue.serverTimestamp(),
-      deviceIds: [deviceId], // ✅ Array olarak saklanıyor
+      deviceIds: [deviceId],
     };
 
     await userRef.set(newUserData);
@@ -2270,17 +2269,7 @@ function generateDeviceId() {
 }
 
 // Kullanıcı değiştir fonksiyonu da güncellenmeli
-function changeUser() {
-  if (confirm("Kullanıcı değiştirmek istediğinizden emin misiniz?")) {
-    // Sadece aktif kullanıcı bilgilerini temizle, cihaz geçmişini koru
-    localStorage.removeItem("currentUser");
-    localStorage.removeItem("lastLoginTime");
-    localStorage.removeItem("userLoginCount");
-    currentUser = "";
-    currentUserTotalScore = 0;
-    showLoginScreen();
-  }
-}
+
 
 // 🗑️ Kullanıcı verilerini temizle
 function clearUserData() {
@@ -2292,10 +2281,37 @@ function clearUserData() {
 }
 
 // 🔄 Kullanıcı değiştir fonksiyonu
+// ✅ KULLANICI DEĞİŞTİRME - TEK VE DOĞRU FONKSİYON
 function changeUser() {
-  if (confirm("Kullanıcı değiştirmek istediğinizden emin misiniz?")) {
-    clearUserData();
-    showLoginScreen();
+  console.log("Kullanıcı değiştirme işlemi direkt başlatıldı.");
+
+  // 1. Mevcut oyun döngüsünü durdur
+  if (animationId) {
+    cancelAnimationFrame(animationId);
+    animationId = null;
+  }
+
+  // 2. Oyun durumu bayraklarını sıfırla
+  gameStarted = false;
+  isGameOver = false;
+
+  // 3. Günlük limit bayrağını sıfırla
+  isDailyLimitReached = false;
+
+  // 4. Mevcut kullanıcı bilgilerini temizle
+  localStorage.removeItem("currentUser");
+  localStorage.removeItem("lastLoginTime");
+  localStorage.removeItem("userLoginCount");
+  currentUser = "";
+  currentUserTotalScore = 0;
+
+  // 5. Kullanıcıyı giriş ekranına yönlendir
+  showLoginScreen();
+
+  // 6. Giriş alanını temizle
+  const usernameInput = document.getElementById("usernameInput");
+  if (usernameInput) {
+    usernameInput.value = "";
   }
 }
 
@@ -2390,28 +2406,7 @@ function showModernPopup(message, type = "error") {
   document.addEventListener("keydown", closeOnEsc);
 }
 
-function changeUser() {
-  // Mevcut oyunu durdur
-  if (animationId) {
-    cancelAnimationFrame(animationId);
-    animationId = null;
-  }
 
-  gameStarted = false;
-  isGameOver = false;
-
-  // Şu anki kullanıcıyı unut (cihaz geçmişi saklanacak)
-  localStorage.removeItem("currentUser");
-
-  // Login ekranına dön
-  showLoginScreen();
-
-  // Giriş alanını temizle
-  const usernameInput = document.getElementById("usernameInput");
-  if (usernameInput) {
-    usernameInput.value = "";
-  }
-}
 
 // DOMContentLoaded event listener'ı - TEK YER!
 document.addEventListener("DOMContentLoaded", async function () {
