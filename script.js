@@ -965,7 +965,7 @@ function isOverDailyLimit() {
 
   const todayKey = `dailyCount_${currentUser}_${new Date().toDateString()}`;
   const count = parseInt(localStorage.getItem(todayKey) || "0");
-  return count >= 1; // test bitince 10 yapmayı unutma he
+  return count >= 5; // test bitince 10 yapmayı unutma he
 }
 async function updateAllUserStatsFirebase(username, newScore) {
   const deviceId = getDeviceFingerprint();
@@ -975,7 +975,7 @@ async function updateAllUserStatsFirebase(username, newScore) {
   const todayKey = `dailyCount_${currentUser}_${new Date().toDateString()}`;
   // localStorage'daki bu satır sadece fallback olarak tutuluyor
   const localTodayCount = parseInt(localStorage.getItem(todayKey) || "0");
-  const remaining = Math.max(0, 1 - localTodayCount); // test için 1 yaptım mallık yapıp 10 yapmayı unutma
+  const remaining = Math.max(0, 5 - localTodayCount); // test için 1 yaptım mallık yapıp 10 yapmayı unutma
   const dailyPlaysEl = document.getElementById("dailyPlays");
   if (dailyPlaysEl) {
     dailyPlaysEl.textContent = `🎮 Kalan Hak: ${remaining}`;
@@ -1011,7 +1011,7 @@ async function updateAllUserStatsFirebase(username, newScore) {
       todayCount = 0; // Yeni gün başladıysa sayaç sıfırlanır
     }
  
-    if (todayCount >= 1) {  //TEST SONRASI YİNE 10 YAAAAAP
+    if (todayCount >= 5) {  //TEST SONRASI YİNE 10 YAAAAAP
       throw new Error("📊 Günlük skor gönderim limitine ulaştınız!");
     }
  
@@ -1048,7 +1048,7 @@ async function updateAllUserStatsFirebase(username, newScore) {
     localStorage.setItem(todayKey, (todayCount + 1).toString());
  
     const nextCount = todayCount + 1;
-    const remainingPlays = Math.max(0, 10 - nextCount);  //TEST SONRASI YİNE 15 YAAAAAP
+    const remainingPlays = Math.max(0, 5 - nextCount);  //TEST SONRASI YİNE 15 YAAAAAP
  
     // Kalan oyun hakkını göster
     showNotification(`🎮 Kalan oyun hakkınız: ${remainingPlays}`, "info");
@@ -1064,7 +1064,7 @@ async function updateAllUserStatsFirebase(username, newScore) {
     console.error("❌ Firebase güncelleme hatası:", error);
  
     // Firestore hata alırsa localStorage'a fallback:
-    const remainingPlays = 1 - localTodayCount; //TEST SONRASI YİNE 15 YAAAAAP
+    const remainingPlays = 5 - localTodayCount; //TEST SONRASI YİNE 15 YAAAAAP
     showNotification(`🎮 Kalan oyun hakkınız: ${remainingPlays}`, "warning");
  
     if (
