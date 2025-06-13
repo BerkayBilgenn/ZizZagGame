@@ -237,28 +237,30 @@ function resizeCanvas() {
   const rect = gameContainer.getBoundingClientRect();
   const dpr = window.devicePixelRatio || 1;
 
-  // 🔧 Daha önceki ölçeklemeyi sıfırla
+  // 🔧 Önceki ölçeklemeyi sıfırla
   ctx.setTransform(1, 0, 0, 1, 0, 0);
 
-  // Canvas'ı gerçek cihaz çözünürlüğüne ayarla
+  // 🎯 Canvas çözünürlüğünü cihazın ekranına göre ayarla
   canvas.width = rect.width * dpr;
   canvas.height = rect.height * dpr;
 
-  // CSS boyutunu koru
+  // CSS boyutlarını koru (görünen alan bozulmasın)
   canvas.style.width = rect.width + 'px';
   canvas.style.height = rect.height + 'px';
 
-  // Çizimleri doğru ölçekte yap
-  ctx.scale(dpr, dpr); // bu artık tek seferlik doğru çalışır
+  // 🔍 YENİ ÖLÇEKLEMELERİ UYGULA (sadece 1 kere)
+  ctx.scale(dpr, dpr);
 
-  // Oyun mantığı için orijinal boyutları kullan
+  // 💡 Oyun mantığı için orijinal genişlik üzerinden hesapla
   maxGapX = rect.width - gapSize - 60;
 
+  // 🔁 Oyuncunun konumunu sadece oyun başlamadıysa ayarla
   if (!gameStarted) {
     player.x = rect.width / 2;
-    player.y = rect.height - 50;
+    player.y = rect.height - 80; // ❗ -50 yerine -80 yap, mobilde tam görünür
   }
 }
+
 
 
 function startGame() {
@@ -295,21 +297,18 @@ function startGame() {
 }
 
 function resetGameVariables() {
+  // CSS yükseklik değerini almak için:
+  const cssHeight = canvas.height / (window.devicePixelRatio || 1);
+  const cssWidth  = canvas.width  / (window.devicePixelRatio || 1);
+
   player = {
-    x: canvas.width / 2,
-    y: canvas.height - 50,
+    x: cssWidth  / 2,
+    y: cssHeight - 50,
     radius: 12,
     dir: 1,
     trail: [],
   };
-  speed = 1.5; // Mobil için yavaş başlangıç
-  score = 0;
-  combo = 1;
-  perfectHits = 0;
-  streak = 0;
-  obstacles = [];
-  powerups = [];
-  particles = [];
+  // … diğer sıfırlamalar
 }
 
 document.addEventListener("DOMContentLoaded", function () {
