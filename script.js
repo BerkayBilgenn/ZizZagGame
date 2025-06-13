@@ -72,6 +72,7 @@ async function updateScore(newScore) {
   }
 }
 
+const isMobile = /Mobi|Android|iPhone/i.test(navigator.userAgent);
 const canvas = document.getElementById("canvas");
 const ctx = canvas.getContext("2d");
 
@@ -234,13 +235,25 @@ function showWelcomeToast(message) {
 function resizeCanvas() {
   const gameContainer = document.getElementById("game");
   const rect = gameContainer.getBoundingClientRect();
-  canvas.width = rect.width;
-  canvas.height = rect.height;
-  maxGapX = canvas.width - gapSize - 60;
+  const dpr = window.devicePixelRatio || 1;
+  
+  // Canvas'ı gerçek cihaz çözünürlüğüne ayarla
+  canvas.width = rect.width * dpr;
+  canvas.height = rect.height * dpr;
+  
+  // CSS boyutunu koru
+  canvas.style.width = rect.width + 'px';
+  canvas.style.height = rect.height + 'px';
+  
+  // Çizimleri doğru ölçekte yap
+  ctx.scale(dpr, dpr);
+  
+  // Oyun mantığı için orijinal boyutları kullan
+  maxGapX = rect.width - gapSize - 60;
 
   if (!gameStarted) {
-    player.x = canvas.width / 2;
-    player.y = canvas.height - 50;
+    player.x = rect.width / 2;
+    player.y = rect.height - 50;
   }
 }
 
@@ -619,7 +632,11 @@ function processNotificationQueue() {
   notification.style.fontSize = "1rem";
   notification.style.fontWeight = "600";
   notification.style.textAlign = "center";
-  notification.style.backdropFilter = "blur(12px)";
+  if (!isMobile) {
+    notification.style.backdropFilter = "blur(12px)";
+  } else {
+    notification.style.backdropFilter = "none";
+  }
   notification.style.background = "rgba(255, 255, 255, 0.08)";
   notification.style.border = "1px solid rgba(255,255,255,0.2)";
   notification.style.color = "#FFD700";
@@ -717,6 +734,13 @@ function updateParticles() {
     p.y += p.vy;
     return --p.life > 0;
   });
+
+  // Ekstra güvenlik: Çok fazla partikül birikmesin
+const MAX_PARTICLES = 200;
+if (particles.length > MAX_PARTICLES) {
+  particles.splice(0, particles.length - MAX_PARTICLES);
+}
+
 }
 
 function drawParticles() {
@@ -749,7 +773,7 @@ function maybeCreatePowerup(timestamp) {
   }
 }
 
-const MAX_ACTIVE_POWERUPS = 50; // Fonksiyon dışında tanımla
+const MAX_ACTIVE_POWERUPS = isMobile ? 30 : 50; // Fonksiyon dışında tanımla
 
 function drawPowerups(deltaTime) {
   for (let p of powerups) {
@@ -1304,35 +1328,44 @@ function createObstacle() {
   obstacles.push({ y, gapX, passed: false });
 }
 
-function drawPlayer() {
-  player.trail.push({ x: player.x, y: player.y });
-  if (player.trail.length > 10) player.trail.shift();
+function drawPlayer(drawEffects = true) {
+  if (drawEffects) {
+    player.trail.push({ x: player.x, y: player.y });
+    if (player.trail.length > 6) player.trail.shift(); // daha kısa trail
 
-  for (let i = 0; i < player.trail.length; i++) {
-    ctx.save();
-    ctx.globalAlpha = (i / player.trail.length) * 0.6;
-    ctx.beginPath();
-    ctx.arc(
-      player.trail[i].x,
-      player.trail[i].y,
-      player.radius * (i / player.trail.length),
-      0,
-      Math.PI * 2
-    );
-    ctx.fillStyle = combo > 5 ? "#FFD700" : "#fff";
-    ctx.fill();
-    ctx.restore();
+    for (let i = 0; i < player.trail.length; i++) {
+      ctx.save();
+      ctx.globalAlpha = (i / player.trail.length) * 0.4; // daha az transparan
+      ctx.beginPath();
+      ctx.arc(
+        player.trail[i].x,
+        player.trail[i].y,
+        player.radius * (i / player.trail.length),
+        0,
+        Math.PI * 2
+      );
+      ctx.fillStyle = combo > 5 ? "#FFD700" : "#fff";
+      ctx.fill();
+      ctx.restore();
+    }
   }
 
   ctx.save();
   ctx.beginPath();
   ctx.arc(player.x, player.y, player.radius, 0, Math.PI * 2);
   ctx.fillStyle = combo > 5 ? "#FFD700" : "#fff";
-  ctx.shadowColor = combo > 5 ? "#FFD700" : "#1D77C0";
-  ctx.shadowBlur = 12 + combo * 2;
+
+  if (!isMobile && drawEffects) {
+    ctx.shadowColor = combo > 5 ? "#FFD700" : "#1D77C0";
+    ctx.shadowBlur = 8 + combo * 2; // düşürüldü
+  } else {
+    ctx.shadowBlur = 0;
+  }
+
   ctx.fill();
   ctx.restore();
 }
+
 
 function drawObstacles(deltaTime) {
   ctx.save();
@@ -1423,13 +1456,15 @@ function drawBackgroundElements() {
   ctx.save();
   ctx.strokeStyle = "rgba(255, 255, 255, 0.1)";
   ctx.lineWidth = 1;
-  for (let i = 0; i < canvas.height; i += 50) {
-    const offset = Math.sin(t + i * 0.01) * 10;
-    ctx.beginPath();
-    ctx.moveTo(0, i + offset);
-    ctx.lineTo(canvas.width, i + offset);
-    ctx.stroke();
-  }
+  // Daha seyrek çizgi (her 80 pikselde bir), daha düşük frekanslı sinüs
+for (let i = 0; i < canvas.height; i += 80) {
+  const offset = Math.sin(t * 0.5 + i * 0.005) * 5; // daha az hesaplama
+  ctx.beginPath();
+  ctx.moveTo(0, i + offset);
+  ctx.lineTo(canvas.width, i + offset);
+  ctx.stroke();
+}
+
   ctx.restore();
 }
 
@@ -1495,37 +1530,36 @@ function updateUI() {
 }
 
 function draw(timestamp) {
-  if (isDailyLimitReached) {
-    return; // Animasyonu tamamen durdur
-  }
-  
-  if (isGameOver || !gameStarted) {
-    return;
-  }
+  if (isDailyLimitReached || isGameOver || !gameStarted) return;
 
   try {
-    // 1) ZAMAN FARKINI HESAPLA
     const now = performance.now();
-    const deltaTime = (now - lastTime) / 1000; // saniye cinsinden
+    const deltaTime = Math.min((now - lastTime) / 1000, 0.05); // max 50ms
     lastTime = now;
 
-    // İlk karede çok küçük deltaTime olmasın diye güvenlik
-    window.safeDeltaTime = deltaTime > 0.001 ? deltaTime : 1 / 60;
-
-    // 2) Canvas'ı temizle ve temel çizimleri yap
+    // Ekran temizleme
     ctx.clearRect(0, 0, canvas.width, canvas.height);
+
+    // Düşük FPS kontrolü
+    const fps = 1 / deltaTime;
+    const isLowFps = fps < 30;
+
+    // Görsel efektleri azalt (düşük FPS'te)
+    const drawEffects = !isLowFps;
+
     drawBackgroundElements();
-    drawPlayer();
-    drawObstacles(window.safeDeltaTime);
-    drawPowerups(window.safeDeltaTime);
-    drawParticles();
-    updateParticles();
+    drawPlayer(drawEffects);
+    drawObstacles(deltaTime);
+    drawPowerups(deltaTime);
+    if (drawEffects) {
+      drawParticles();
+      updateParticles();
+    }
 
-    // 3) Oyuncu hareketi - deltaTime ile normalize edildi
-    const moveSpeed = speed * 1.2 * 60; // 60 FPS baz alınıyor
-    player.x += player.dir * moveSpeed * window.safeDeltaTime;
+    // Oyuncu hareketi
+    const moveSpeed = speed * 72; // 1.2 * 60
+    player.x += player.dir * moveSpeed * deltaTime;
 
-    // 4) Kenarlarda zıplama mantığı
     if (
       player.x - player.radius <= 0 ||
       player.x + player.radius >= canvas.width
@@ -1535,38 +1569,25 @@ function draw(timestamp) {
         player.radius,
         Math.min(canvas.width - player.radius, player.x)
       );
-      createParticles(player.x, player.y, "#ffffff");
+      if (drawEffects) createParticles(player.x, player.y, "#ffffff");
     }
 
-    // 5) Çarpışma kontrolü
-    try {
-      if (checkCollision()) {
-        gameOver();
-        return;
-      }
-    } catch (error) {
-      console.log("Collision check error:", error);
+    if (checkCollision()) {
+      gameOver();
+      return;
     }
 
-    // 6) Skor artışı - deltaTime ile normalize edildi
+    // Skor hesaplama
     let baseMultiplier = 0.1;
+    if (streak >= 10) baseMultiplier = 0.15;
+    if (streak >= 25) baseMultiplier = 0.2;
+    if (streak >= 50) baseMultiplier = 0.25;
 
-    if (streak >= 10 && streak < 25) {
-      baseMultiplier = 0.15; // %50 artır
-    } else if (streak >= 25 && streak < 50) {
-      baseMultiplier = 0.2;  // 2 kat
-    } else if (streak >= 50) {
-      baseMultiplier = 0.25; // Daha da hızlan
-    }
-    
-    score += baseMultiplier * combo * 60 * window.safeDeltaTime;
-    
+    score += baseMultiplier * combo * 60 * deltaTime;
     updateUI();
 
-    // 7) Power-up oluşturma — “zaman bazlı” kontrol
     maybeCreatePowerup(now);
 
-    // 8) Yeni engel oluşturma
     if (
       obstacles.length === 0 ||
       obstacles.at(-1).y > -minVerticalSpacing * 0.8
@@ -1574,18 +1595,15 @@ function draw(timestamp) {
       createObstacle();
     }
 
-    // 9) Ekranın dışına çıkan engelleri temizle
-    obstacles = obstacles.filter(
-      (obs) => obs.y < canvas.height + obstacleHeight
-    );
+    obstacles = obstacles.filter((obs) => obs.y < canvas.height + obstacleHeight);
 
-    // 10) Döngüyü devam ettir
     animationId = requestAnimationFrame(draw);
   } catch (error) {
-    console.log("Draw function error:", error);
+    console.log("Draw error:", error);
     gameOver();
   }
 }
+
 
 // Instagram Paylaşım Fonksiyonu
 function shareScore() {
