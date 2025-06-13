@@ -250,11 +250,12 @@ function startGame() {
   // isDailyLimitReached bayrağını, o anki kullanıcının limit durumuna göre güncelleriz.
   isDailyLimitReached = isOverDailyLimit();
 
-  // Artık güncel olan bayrağı kontrol edebiliriz.
-  if (isDailyLimitReached) {
-    showLimitPopup();
-    return;
-  }
+// 1. KONTROL: Oyuna başlamadan ÖNCE kullanıcının hakkı var mı diye anlık kontrol et.
+if (isOverDailyLimit()) {
+  // Eğer limit doluysa, popup göster ve fonksiyondan hemen çık.
+  showLimitPopup();
+  return;
+}
 
   // --- Fonksiyonun geri kalanı tamamen aynı ---
 
@@ -463,29 +464,32 @@ window.addEventListener("resize", resizeCanvas);
 
 
 function restartGame() {
-  if (isOverDailyLimit()) {
-      isDailyLimitReached = true;
-      showLimitPopup();
-      // enforceDailyLimit(); ← Bunu da kaldır
-      return;
+  console.log("--- 1. Tekrar Oyna butonuna tıklandı! ---");
+
+  const limitAsildiMi = isOverDailyLimit();
+  console.log("--- 2. Limit kontrolü yapıldı. Sonuç: ", limitAsildiMi, "---");
+  console.log("(Mevcut kullanıcı: '" + currentUser + "')");
+
+  if (limitAsildiMi) {
+    console.log("--- 3. Limit aşıldığı için popup gösterilecek. ---");
+    showLimitPopup();
+    return;
   }
+
+  console.log("--- 3. Limit aşılmamış, oyun yeniden başlıyor. ---");
 
   if (animationId) {
       cancelAnimationFrame(animationId);
       animationId = null;
   }
-
   lastTime = performance.now();
   resizeCanvas();
   resetGameVariables();
   lastPowerupTime = 0;
-  
   isGameOver = false;
   gameStarted = true;
-
   gameOverDiv.style.display = "none";
   hud.style.display = "block";
-
   draw();
 }
 
@@ -796,8 +800,8 @@ function drawPowerups(deltaTime) {
   }
 }
 // Game over fonksiyonunda Firebase skor güncellemesi
+// DOĞRU KOD (YENİ HALİ)
 async function gameOver() {
-  // Instead, calculate gameScore at the top, before using it
   const gameScore = Math.floor(score);
 
   console.log(
@@ -818,68 +822,29 @@ async function gameOver() {
 
   console.log("🛑 gameOver başladı | Skor:", gameScore);
 
-  // Debug - Değerleri kontrol et
-  console.log("🔍 currentUser:", currentUser);
-  console.log("🔍 gameScore:", gameScore);
-  console.log("🔍 typeof currentUser:", typeof currentUser);
-  console.log("🔍 currentUser boş mu:", !currentUser);
-  console.log("🔍 gameScore <= 0 mu:", gameScore <= 0);
-
   if (!currentUser || gameScore <= 0) {
     console.warn(
       "❌ currentUser boş veya skor 0 - Firebase çağrısı yapılmayacak"
     );
-    console.warn("❌ currentUser:", currentUser, "| gameScore:", gameScore);
     return;
   }
 
-  console.log("✅ Kontroller geçildi, devam ediliyor...");
-
-  // Animasyonu durdur
   if (animationId) {
     cancelAnimationFrame(animationId);
     animationId = null;
-    console.log("✅ Animation durduruldu");
   }
 
   isGameOver = true;
   gameStarted = false;
   sessionGames++;
 
-  console.log("✅ Oyun durumu ayarlandı");
-  console.log("📊 isGameOver:", isGameOver);
-  console.log("📊 gameStarted:", gameStarted);
-  console.log("📊 sessionGames:", sessionGames);
-
   hud.style.display = "none";
   gameOverDiv.style.display = "block";
 
-  console.log("✅ UI elementleri ayarlandı");
-
-  // 🐛 FIX: result değişkenini try bloğunun dışında tanımla
   let result = null;
 
   try {
-    console.log("🔄 Firebase çağrısı başlatılıyor...");
-    console.log(
-      "📤 Gönderilecek veriler - User:",
-      currentUser,
-      "| Score:",
-      gameScore
-    );
-
     result = await updateAllUserStatsFirebase(currentUser, gameScore);
-    console.log("🧪 Kullanıcı adı:", currentUser);
-    console.log(
-      "🧪 Firebase doküman ID var mı?",
-      (await db.collection("users").doc(currentUser).get()).exists
-    );
-
-    console.log("📈 Firebase sonucu alındı:", result);
-    console.log("🏆 Yeni rekor mu:", result.isNewRecord);
-    console.log("📊 En iyi skor:", result.bestScore);
-    console.log("📊 Toplam skor:", result.totalScore);
-    console.log("📊 Oynama sayısı:", result.gamesPlayed);
 
     // UI Güncellemeleri
     if (finalScore) {
@@ -887,33 +852,17 @@ async function gameOver() {
         ? "🏆 YENİ REKOR! 🏆<br>"
         : "🎮 Oyun Bitti!<br>";
       finalScore.innerHTML = message + `Skorun: ${gameScore}`;
-      console.log("✅ Final score güncellendi:", finalScore.innerHTML);
-    } else {
-      console.warn("⚠️ finalScore elementi bulunamadı");
     }
-
     if (personalBest) {
       personalBest.innerHTML = `🥇 En İyi: ${result.bestScore}`;
-      console.log("✅ Personal best güncellendi:", personalBest.innerHTML);
-    } else {
-      console.warn("⚠️ personalBest elementi bulunamadı");
     }
-
     if (sessionStats) {
       sessionStats.innerHTML = `📊 ${currentUser} toplam: ${result.totalScore} | Oynama: ${result.gamesPlayed}`;
-      console.log("✅ Session stats güncellendi:", sessionStats.innerHTML);
-    } else {
-      console.warn("⚠️ sessionStats elementi bulunamadı");
     }
-
-    console.log("✅ Tüm UI güncellemeleri tamamlandı");
     console.log("✅ Firebase verileri başarıyla kaydedildi");
+
   } catch (err) {
     console.error("🔥 Firebase güncelleme hatası:", err);
-    console.error("🔥 Hata detayları:", err.message);
-    console.error("🔥 Hata stack:", err.stack);
-
-    // Hata durumunda UI'yi yine de güncelle (offline durumu için)
     if (finalScore) {
       finalScore.innerHTML = `🎮 Oyun Bitti!<br>Skorun: ${gameScore}`;
     }
@@ -924,27 +873,17 @@ async function gameOver() {
       sessionStats.innerHTML = `📊 Bağlantı hatası - Veriler kaydedilemedi`;
     }
   }
-
-  // 🐛 FIX: result'ın null olup olmadığını kontrol et
-  if (result && result.remainingPlays <= 0) {
-    const restartBtn = document.getElementById("startButtonRestart");
-    const startMainBtn = document.getElementById("startButtonMain");
-
-    [restartBtn, startMainBtn].forEach((btn) => {
-      if (btn) {
-        btn.disabled = true;
-        btn.classList.add("disabled"); // CSS ile görsel olarak da kapalı yap
-        btn.addEventListener("click", showLimitPopup);
-      }
-    });
-  }
+  
+  // --- SORUNLU BÖLÜM BURADAN TAMAMEN KALDIRILDI ---
 
   console.log("🏁 gameOver() fonksiyonu tamamlandı");
 }
 
 function showLimitPopup() {
-  // Zaten açık popup varsa hiçbir şey yapma
+  console.log("--- 4. showLimitPopup fonksiyonu başarıyla çağrıldı! Popup şimdi görünmeli. ---");
+
   if (document.getElementById("modernPopup")) {
+      console.log("--- (Uyarı: Ekranda zaten bir popup vardı, yenisi gösterilmedi.) ---");
       return;
   }
   
@@ -2282,33 +2221,50 @@ function clearUserData() {
 
 // 🔄 Kullanıcı değiştir fonksiyonu
 // ✅ KULLANICI DEĞİŞTİRME - TEK VE DOĞRU FONKSİYON
+// YENİ HALİ
 function changeUser() {
   console.log("Kullanıcı değiştirme işlemi direkt başlatıldı.");
 
-  // 1. Mevcut oyun döngüsünü durdur
   if (animationId) {
     cancelAnimationFrame(animationId);
     animationId = null;
   }
 
-  // 2. Oyun durumu bayraklarını sıfırla
   gameStarted = false;
   isGameOver = false;
-
-  // 3. Günlük limit bayrağını sıfırla
   isDailyLimitReached = false;
 
-  // 4. Mevcut kullanıcı bilgilerini temizle
   localStorage.removeItem("currentUser");
   localStorage.removeItem("lastLoginTime");
   localStorage.removeItem("userLoginCount");
   currentUser = "";
   currentUserTotalScore = 0;
 
-  // 5. Kullanıcıyı giriş ekranına yönlendir
+  // --- YENİ EKLENEN BÖLÜM ---
+  // Butonları tekrar aktifleştir ve popup event'lerini temizle.
+  const startBtn = document.getElementById("startButtonMain");
+  const restartBtn = document.getElementById("startButtonRestart");
+  
+  [startBtn, restartBtn].forEach((btn) => {
+      if (btn) {
+          btn.disabled = false;
+          btn.classList.remove("disabled");
+          
+          // Buton üzerindeki eski event listener'ları temizleyip orijinalini yeniden atamak en güvenli yoldur.
+          const newBtn = btn.cloneNode(true);
+          btn.parentNode.replaceChild(newBtn, btn);
+
+          if (newBtn.id === "startButtonMain") {
+              newBtn.addEventListener("click", startGame);
+          } else if (newBtn.id === "startButtonRestart") {
+              newBtn.addEventListener("click", restartGame);
+          }
+      }
+  });
+  // --- YENİ EKLENEN BÖLÜM SONU ---
+
   showLoginScreen();
 
-  // 6. Giriş alanını temizle
   const usernameInput = document.getElementById("usernameInput");
   if (usernameInput) {
     usernameInput.value = "";
