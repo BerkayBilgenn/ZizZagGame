@@ -236,18 +236,21 @@ function resizeCanvas() {
   const gameContainer = document.getElementById("game");
   const rect = gameContainer.getBoundingClientRect();
   const dpr = window.devicePixelRatio || 1;
-  
+
+  // 🔧 Daha önceki ölçeklemeyi sıfırla
+  ctx.setTransform(1, 0, 0, 1, 0, 0);
+
   // Canvas'ı gerçek cihaz çözünürlüğüne ayarla
   canvas.width = rect.width * dpr;
   canvas.height = rect.height * dpr;
-  
+
   // CSS boyutunu koru
   canvas.style.width = rect.width + 'px';
   canvas.style.height = rect.height + 'px';
-  
+
   // Çizimleri doğru ölçekte yap
-  ctx.scale(dpr, dpr);
-  
+  ctx.scale(dpr, dpr); // bu artık tek seferlik doğru çalışır
+
   // Oyun mantığı için orijinal boyutları kullan
   maxGapX = rect.width - gapSize - 60;
 
@@ -256,6 +259,7 @@ function resizeCanvas() {
     player.y = rect.height - 50;
   }
 }
+
 
 function startGame() {
   // YENİ GÜVENLİK KONTROLÜ: Oyuna başlamadan önce limiti tekrar kontrol et.
